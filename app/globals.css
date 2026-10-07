@@ -18,4 +18,107 @@ body {
 body {
   background: var(--background);
   color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+header {
+  height: 64px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(7, 11, 18, 0.9);
+}
+
+header > div {
+  max-width: 1400px;
+  height: 100%;
+  margin: 0 auto;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 32px;
+}
+
+header > div > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  font-size: 18px;
+  font-weight: 700;
+}
+
+header > div > div:first-child span:first-child {
+  width: 28px;
+  height: 28px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 8px;
+  background: #8b5cf6;
+  color: white;
+
+  font-size: 14px;
+}
+
+nav {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+nav a {
+  color: rgba(255, 255, 255, 0.65);
+  text-decoration: none;
+  font-size: 14px;
+
+  transition: color 0.2s ease;
+}
+
+nav a:hover {
+  color: white;
+}
+
+header > div > div:last-child {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+header input {
+  width: 210px;
+  height: 36px;
+
+  padding: 0 14px;
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+
+  outline: none;
+}
+
+header input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+header input:focus {
+  border-color: rgba(139, 92, 246, 0.6);
+}
+
+header button {
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+
+  cursor: pointer;
+  font-size: 18px;
+}
+
+header button:hover {
+  color: white;
 }
