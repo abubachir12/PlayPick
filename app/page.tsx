@@ -28,35 +28,62 @@ export default function Home() {
       </header>
 
 
-      <h1>Во что поиграть сейчас?</h1>
-      <p>
-        Подберём игры под твоё настроение, время и предпочтения.
-      </p>
+      <section className="hero">
+        <div className="hero-content">
 
-      <button>Подобрать игру</button>
-      <button>Как это работает?</button>
+          <div className="hero-label">
+            ✦ Персональные рекомендации
+          </div>
 
-      <div>
-        <div>
-          <strong>12 500+</strong>
-          <span>оценок от игроков</span>
+          <h1>
+            Во что поиграть
+            <span>сейчас?</span>
+          </h1>
+
+          <p className="hero-description">
+            Подберём игры под твоё настроение, время
+            и то, что тебе нравится.
+          </p>
+
+          <div className="hero-buttons">
+            <button className="primary-button">
+              Подобрать игру →
+            </button>
+
+            <button className="secondary-button">
+              Как это работает?
+            </button>
+          </div>
+
+          <div className="statistics">
+            <div className="stat">
+              <strong>12 500+</strong>
+              <span>оценок от игроков</span>
+            </div>
+
+            <div className="stat">
+              <strong>8 900+</strong>
+              <span>игр в базе</span>
+            </div>
+
+            <div className="stat">
+              <strong>100+</strong>
+              <span>уникальных характеристик</span>
+            </div>
+
+            <div className="stat">
+              <strong>∞</strong>
+              <span>персональных рекомендаций</span>
+            </div>
+          </div>
+
         </div>
 
-        <div>
-          <strong>8 900+</strong>
-          <span>игр в базе</span>
+        {/* Декоративная часть справа */}
+        <div className="hero-decoration">
+          <div className="hero-glow"></div>
         </div>
-
-        <div>
-          <strong>Уникальные</strong>
-          <span>характеристики</span>
-        </div>
-
-        <div>
-          <strong>Рекомендации</strong>
-          <span>под твоё настроение</span>
-        </div>
-      </div>
+      </section>
     </main >
   );
 }
