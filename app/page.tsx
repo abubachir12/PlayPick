@@ -1,6 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  Star,
+  LibraryBig,
+  Heart,
+  Sparkles,
+} from "lucide-react";
+
 const heroImages = [
   "/hero/ark.jpg",
   "/hero/battlefield.jpg",
@@ -59,9 +66,9 @@ export default function Home() {
         <div className="hero-overlay"></div>
 
         <div className="hero-content">
-          <div className="hero-label">
+          {/* <div className="hero-label">
             ✦ Персональные рекомендации
-          </div>
+          </div> */}
 
           <h1 className="hero-title">
             Во что поиграть
@@ -85,23 +92,47 @@ export default function Home() {
 
           <div className="hero-stats">
             <div className="hero-stat">
-              <strong>12 500+</strong>
-              <span>оценок от игроков</span>
+              <div className="hero-stat-icon">
+                <Star size={18} />
+              </div>
+
+              <div className="hero-stat-content">
+                <strong>12 500+</strong>
+                <span>оценок от игроков</span>
+              </div>
             </div>
 
             <div className="hero-stat">
-              <strong>8 900+</strong>
-              <span>игр в базе</span>
+              <div className="hero-stat-icon">
+                <LibraryBig size={18} />
+              </div>
+
+              <div className="hero-stat-content">
+                <strong>8 900+</strong>
+                <span>игр в базе</span>
+              </div>
             </div>
 
             <div className="hero-stat">
-              <strong>100+</strong>
-              <span>уникальных характеристик</span>
+              <div className="hero-stat-icon">
+                <Heart size={18} />
+              </div>
+
+              <div className="hero-stat-content">
+                <strong>100+</strong>
+                <span>уникальных характеристик</span>
+              </div>
             </div>
 
             <div className="hero-stat">
-              <strong>∞</strong>
-              <span>персональных рекомендаций</span>
+              <div className="hero-stat-icon">
+                <Sparkles size={18} />
+              </div>
+
+              <div className="hero-stat-content">
+                <strong>∞</strong>
+                <span>персональных рекомендаций</span>
+              </div>
             </div>
           </div>
         </div>
