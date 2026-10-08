@@ -1,4 +1,24 @@
+"use client";
+
+import { useEffect, useState } from "react";
+const heroImages = [
+  "/hero/ark.jpg",
+  "/hero/battlefield.jpg",
+  "/hero/rust.jpg",
+  "/hero/witcher.jpg",
+];
+
 export default function Home() {
+  const [currentImage, setCurrentImage] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentImage((prev) => (prev + 1) % heroImages.length);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <main>
       <header>
@@ -15,8 +35,9 @@ export default function Home() {
             <a href="#">Сообщество</a>
           </nav>
 
-          <div>
+          <div className="profile-bar">
             <input
+              className="search"
               type="text"
               placeholder="Поиск игр..."
             />
@@ -27,15 +48,22 @@ export default function Home() {
         </div>
       </header>
 
-
       <section className="hero">
-        <div className="hero-content">
+        <img
+          key={currentImage}
+          src={heroImages[currentImage]}
+          alt=""
+          className="hero-image"
+        />
 
+        <div className="hero-overlay"></div>
+
+        <div className="hero-content">
           <div className="hero-label">
             ✦ Персональные рекомендации
           </div>
 
-          <h1>
+          <h1 className="hero-title">
             Во что поиграть
             <span>сейчас?</span>
           </h1>
@@ -55,35 +83,29 @@ export default function Home() {
             </button>
           </div>
 
-          <div className="statistics">
-            <div className="stat">
+          <div className="hero-stats">
+            <div className="hero-stat">
               <strong>12 500+</strong>
               <span>оценок от игроков</span>
             </div>
 
-            <div className="stat">
+            <div className="hero-stat">
               <strong>8 900+</strong>
               <span>игр в базе</span>
             </div>
 
-            <div className="stat">
+            <div className="hero-stat">
               <strong>100+</strong>
               <span>уникальных характеристик</span>
             </div>
 
-            <div className="stat">
+            <div className="hero-stat">
               <strong>∞</strong>
               <span>персональных рекомендаций</span>
             </div>
           </div>
-
-        </div>
-
-        {/* Декоративная часть справа */}
-        <div className="hero-decoration">
-          <div className="hero-glow"></div>
         </div>
       </section>
-    </main >
+    </main>
   );
 }
