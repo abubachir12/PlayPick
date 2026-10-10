@@ -6,6 +6,11 @@ import {
   LibraryBig,
   Heart,
   Sparkles,
+  Search,
+  Bell,
+  UserRound,
+  Menu,
+  X,
 } from "lucide-react";
 
 const heroImages = [
@@ -17,6 +22,7 @@ const heroImages = [
 
 export default function Home() {
   const [currentImage, setCurrentImage] = useState(0);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -29,13 +35,13 @@ export default function Home() {
   return (
     <main>
       <header>
-        <div>
-          <div>
+        <div className="header-inner">
+          <div className="header-logo">
             <span>✦</span>
             <span>PlayPick</span>
           </div>
 
-          <nav>
+          <nav className="desktop-nav">
             <a href="#">Главная</a>
             <a href="#">Игры</a>
             <a href="#">Подбор</a>
@@ -43,16 +49,61 @@ export default function Home() {
           </nav>
 
           <div className="profile-bar">
-            <input
-              className="search"
-              type="text"
-              placeholder="Поиск игр..."
-            />
+            <div className="search-wrapper">
+              <Search size={16} className="search-icon" />
 
-            <button>♧</button>
-            <button>👤</button>
+              <input
+                className="search"
+                type="text"
+                placeholder="Поиск игр..."
+                aria-label="Поиск игр"
+              />
+            </div>
+
+            <button type="button" aria-label="Уведомления">
+              <Bell size={18} />
+            </button>
+
+            <button
+              type="button"
+              className="header-avatar"
+              aria-label="Профиль пользователя"
+            >
+              <UserRound size={18} />
+            </button>
           </div>
+
+          <button
+            type="button"
+            className="mobile-menu-toggle"
+            aria-label={isMobileMenuOpen ? "Закрыть меню" : "Открыть меню"}
+            aria-expanded={isMobileMenuOpen}
+            aria-controls="mobile-navigation"
+            onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+          >
+            {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
         </div>
+
+        {isMobileMenuOpen && (
+          <nav className="mobile-nav" id="mobile-navigation">
+            <a href="#" onClick={() => setIsMobileMenuOpen(false)}>
+              Главная
+            </a>
+
+            <a href="#" onClick={() => setIsMobileMenuOpen(false)}>
+              Игры
+            </a>
+
+            <a href="#" onClick={() => setIsMobileMenuOpen(false)}>
+              Подбор
+            </a>
+
+            <a href="#" onClick={() => setIsMobileMenuOpen(false)}>
+              Сообщество
+            </a>
+          </nav>
+        )}
       </header>
 
       <section className="hero">
