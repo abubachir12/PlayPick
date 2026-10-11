@@ -3,11 +3,16 @@ export interface Game {
   title: string;
   slug: string;
 
-  description?: string;
-  coverUrl?: string;
+  description?: string | null;
+  coverUrl?: string | null;
 
   releaseDate?: string;
 
-  developer?: string;
-  publisher?: string;
+  developer?: string | null;
+  publisher?: string | null;
+  igdbId?: number | null;
+  rawgId?: number | null;
+  steamId?: number | null;
+  createdAt?: string;
+  updatedAt?: string;
 }

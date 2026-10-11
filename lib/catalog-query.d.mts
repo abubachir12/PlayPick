@@ -1,0 +1,8 @@
+export class CatalogQueryError extends Error {}
+export function parseCatalogQuery(params: URLSearchParams): {
+  page: number;
+  limit: number;
+  search: string;
+  offset: number;
+};
+export function escapeLike(value: string): string;
