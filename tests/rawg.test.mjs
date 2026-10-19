@@ -52,10 +52,27 @@ test("fetches bounded list then details, never follows upstream pagination URLs"
   assert.equal(calls[0].url.searchParams.get("search"), "Elden & Ring");
   assert.equal(calls[0].url.searchParams.get("page_size"), "2");
   assert.equal(calls[0].url.searchParams.get("page"), "3");
+  assert.equal(calls[0].url.searchParams.get("search_precise"), "true");
+  assert.equal(calls[0].url.searchParams.has("ordering"), false);
   assert.equal(calls[1].url.pathname, "/api/games/42");
   assert.equal(calls[0].options.redirect, "error");
   assert.ok(calls[0].options.signal instanceof AbortSignal);
   assert.ok(!JSON.stringify(result).includes("test-secret"));
+});
+
+test("exact lookup validates both the requested path and returned identity", async () => {
+  const calls = [];
+  const client = createRawgClient({ apiKey: "secret", wait: noWait, fetchImpl: async (url) => {
+    calls.push(url.pathname); return response(game);
+  } });
+  assert.equal((await client.getGame(42)).rawgId, 42);
+  assert.equal((await client.getGame("game_42")).rawgId, 42);
+  assert.deepEqual(calls, ["/api/games/42", "/api/games/game_42"]);
+  for (const bad of [null, 0, -1, "../games", "https://example.com", "a".repeat(201)]) {
+    await assert.rejects(client.getGame(bad), RawgError);
+  }
+  assert.equal(calls.length, 2);
+  await assert.rejects(client.getGame("different-game"), /другую игру/);
 });
 
 test("empty results need no details; malformed and mismatched responses abort whole batch", async () => {
