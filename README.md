@@ -150,5 +150,134 @@ Unit-тесты проверяют RAWG с подставными HTTP-отве�
 
 ## Дальнейшие модули
 
-Текущий этап — RAWG, хранение и API каталога. Авторизация, личные оценки, избранное
-и подбор по настроению требуют согласованных пользовательских сценариев и реализуются отдельно.
+Реализованы RAWG, хранение, API каталога и первая версия подбора по правилам.
+Авторизация, личные оценки и избранное требуют согласованных пользовательских сценариев и реализуются отдельно.
+
+## Подбор игр
+
+```http
+GET /api/recommendations/options
+POST /api/recommendations
+Content-Type: application/json
+```
+
+Сначала получите поддерживаемые настроения и ограничения из `options`.
+Названия платформ и жанров берите из `/api/catalog/filters`.
+
+```json
+{
+  "mood": "story",
+  "platform": "PC",
+  "preferredGenres": ["RPG"],
+  "excludeIds": [1],
+  "sessionMinutes": 30,
+  "includeUnknownSession": true,
+  "limit": 6
+}
+```
+
+Обязателен только `mood`. Настроения:
+
+| mood | Назначение |
+| --- | --- |
+| relax | Расслабиться: Relaxing/Casual/Cozy, Puzzle/Casual/Simulation |
+| challenge | Испытать себя: Difficult/Souls-like/Competitive/Roguelike |
+| story | Сюжет: Story Rich/Choices Matter/Narration, RPG/Adventure |
+| explore | Исследование: Open World/Exploration/Sandbox, Adventure/RPG |
+| social | Совместная игра: Co-op/Multiplayer и связанные теги |
+
+Параметры:
+
+- `platform`: одно непустое название до 200 символов. Это строгий фильтр, сравнение без учёта регистра.
+- `preferredGenres`: до 5 названий, повышают рейтинг совпавших игр, не исключая остальные жанры.
+- `excludeIds`: до 100 **локальных** ID игр (поле id), а не RAWG ID.
+- `sessionMinutes`: целое число 5–240, необязательно.
+- `includeUnknownSession`: boolean, по умолчанию true; разрешён только вместе с sessionMinutes.
+- `limit`: целое число 1–20, по умолчанию 6.
+- Неизвестные поля и некорректные типы отклоняются, чтобы ошибки формы не игнорировались.
+
+Ответ:
+
+```ts
+interface Result {
+  items: Array<{
+    game: Game;
+    score: number;
+    reasons: Array<{ code: string; value: string; text: string }>;
+    sessionFit: {
+      status: 'not-requested' | 'estimated-fit' | 'unknown';
+      minimumMinutes: number | null;
+      basis: 'editorial' | null;
+      sourceUrl: string | null;
+      note: string | null;
+    };
+  }>;
+  meta: {
+    algorithm: 'rules-v1';
+    preferences: object;
+    eligibleCount: number;
+    returnedCount: number;
+    session: { unknownIncluded: number; unknownExcluded: number };
+    warnings: Array<{ code: string; text: string }>;
+  };
+}
+```
+
+Готовые типы: `types/recommendation.ts`. Для вызова:
+
+```ts
+const response = await fetch('/api/recommendations', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ mood: 'story', platform: 'PC', preferredGenres: ['RPG'] }),
+});
+if (!response.ok) throw new Error('Не удалось подобрать игры');
+const result = await response.json();
+```
+
+Алгоритм `rules-v1` — прозрачные правила по жанрам и тегам локального каталога.
+Он не использует внешний ИИ, не отправляет предпочтения в RAWG, не сохраняет их и не требует входа.
+Общий score: до 60 баллов за настроение, до 20 за предпочитаемые жанры (10 за совпадение),
+до 10 за средний рейтинг RAWG и 10 за подходящую редакторскую оценку сессии.
+Это баллы для сортировки, а не процент вероятности, что игра понравится.
+
+Хотя бы один жанр/тег должен соответствовать настроению. Высокий рейтинг и любимый жанр
+сами по себе не обеспечивают попадание в выдачу. relax исключает известные теги/жанры
+Horror, Survival Horror, Difficult, Souls-like, Competitive, Fast-Paced.
+Платформа, исключённые ID и заданные ограничения времени не ослабляются ради заполнения выдачи.
+При равенстве score сортировка по локальному ID. Пустой результат возвращает 200, items=[]
+и предупреждение no-matches. Полнота и точность подбора зависят от исходных жанров/тегов RAWG.
+
+### Время сессии
+
+RAWG playtime не используется для оценки длительности сессии. Редакторские оценки хранятся
+отдельно в SESSION_PROFILES (`lib/recommendations.mjs`), привязаны к проверенному RAWG ID
+и содержат источник и ограничения. На первом этапе есть профиль Rocket League (RAWG ID 3272):
+редакторский бюджет PlayPick — от 15 минут на стандартный матч с запасом.
+Официальный [пример стандартной пятиминутной игры](https://www.rocketleague.com/news/the-ford-rocket-league-freestyle-invitational-primer)
+поддерживает выбор короткой сессии; сам бюджет 15 минут — оценка PlayPick.
+Поиск соперников и овертайм могут увеличить время, профиль не относится к целому турниру.
+Это не гарантия завершения партии к заданной минуте.
+
+При указании времени игры с неизвестной длительностью по умолчанию остаются в выдаче
+с sessionFit.status=unknown и предупреждением. Их нельзя подписывать на фронтенде как
+«точно подходит на 30 минут». Если includeUnknownSession=false, они исключаются.
+Известная оценка, превышающая доступное время, всегда исключает игру.
+Без sessionMinutes время не влияет на сортировку, статус not-requested.
+Счётчики unknownIncluded/unknownExcluded относятся ко всем кандидатам после фильтров настроения
+и платформы, до ограничения limit. Профили нужно расширять отдельными проверенными данными.
+
+### HTTP и ограничения
+
+- 200: результат, в том числе пустой.
+- 400: некорректный JSON, параметры или неподдерживаемое настроение.
+- 413: тело превышает 8192 байта (проверяется и при потоковой передаче без Content-Length).
+- 415: Content-Type отличается от application/json.
+- 500: безопасное сообщение при ошибке базы/подбора.
+- Остальные методы POST-маршрута не поддерживаются (405).
+
+Ответы используют Cache-Control: no-store. Каталог читается из БД целиком, затем ранжируется
+в памяти; для текущего небольшого каталога это сохраняет полноту отбора без скрытого лимита кандидатов.
+Для большого каталога этап поиска кандидатов нужно перенести в индексируемые запросы/предрасчёт.
+Новых миграций и изменений данных этот модуль не требует. Авторизация и личные оценки
+в данную версию не входят; запрос уже поддерживает исключение ранее просмотренных игр по ID.
