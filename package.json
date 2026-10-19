@@ -9,7 +9,10 @@
     "lint": "eslint",
     "test": "node --test tests/*.test.mjs",
     "test:db": "node --test tests/*.integration.mjs",
-    "import:games": "node scripts/import-games.mjs"
+    "import:games": "node scripts/import-games.mjs",
+    "collect:rawg": "node scripts/collect-rawg.mjs",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
