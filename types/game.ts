@@ -6,7 +6,13 @@ export interface Game {
   description?: string | null;
   coverUrl?: string | null;
 
-  releaseDate?: string;
+  releaseDate?: string | null;
+  genres?: string[] | null;
+  platforms?: string[] | null;
+  tags?: string[] | null;
+  rating?: number | null;
+  metacritic?: number | null;
+  playtime?: number | null;
 
   developer?: string | null;
   publisher?: string | null;
