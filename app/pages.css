@@ -142,6 +142,15 @@ header.is-scrolled {
   animation: fadeUp 0.8s var(--ease-out) both;
 }
 
+/* The text block sits low, just above the stats, instead of hanging under the header */
+.hero-title {
+  margin-top: auto;
+}
+
+.hero-stats {
+  padding-top: 56px;
+}
+
 .hero-description { animation-delay: 0.12s; }
 .hero-buttons { animation-delay: 0.24s; }
 .hero-dots { animation-delay: 0.36s; }
