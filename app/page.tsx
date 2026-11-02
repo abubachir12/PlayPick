@@ -56,24 +56,37 @@ function useJson<T>(url: string) {
 }
 
 function useMoodCovers() {
-  const [covers, setCovers] = useState<Record<string, Game>>({});
+  const [candidates, setCandidates] = useState<Record<string, Game[]>>({});
   useEffect(() => {
     let cancelled = false;
     for (const mood of moods) {
       requestJson<RecommendationResponse>("/api/recommendations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mood: mood.id, limit: 3 }),
+        body: JSON.stringify({ mood: mood.id, limit: 6 }),
       }).then(({ data }) => {
-        const game = data.items.find((item) => item.game.coverUrl)?.game;
-        if (!cancelled && game) setCovers((current) => ({ ...current, [mood.id]: game }));
+        const games = data.items.map((item) => item.game).filter((game) => game.coverUrl);
+        if (!cancelled) setCandidates((current) => ({ ...current, [mood.id]: games }));
       }).catch(() => {});
     }
     return () => {
       cancelled = true;
     };
   }, []);
-  return covers;
+
+  // The same hit often tops several moods; give each tile its own game while alternatives exist.
+  return useMemo(() => {
+    const used = new Set<number>();
+    const covers: Record<string, Game> = {};
+    for (const mood of moods) {
+      const list = candidates[mood.id] ?? [];
+      const game = list.find((item) => !used.has(item.id)) ?? list[0];
+      if (!game) continue;
+      used.add(game.id);
+      covers[mood.id] = game;
+    }
+    return covers;
+  }, [candidates]);
 }
 
 function SectionHeading({ title, text, href, link }: { title: string; text?: string; href?: string; link?: string }) {
