@@ -139,7 +139,12 @@ export default function SearchBox({ className = "", autoFocusShortcut = false, o
       {showPanel && (
         <div className="search-panel">
           {!visible && <p className="search-hint">Ищем…</p>}
-          {visible && games.length === 0 && <p className="search-hint">Ничего не нашлось по «{trimmed}»</p>}
+          {visible && games.length === 0 && (
+            <p className="search-hint">
+              Ничего не нашлось по «{trimmed}»
+              {/[а-яё]/i.test(trimmed) && <><br />Названия игр на английском — попробуй, например, «Witcher».</>}
+            </p>
+          )}
           {games.length > 0 && (
             <ul id={listId} role="listbox" aria-label="Подсказки">
               {games.map((game, index) => {

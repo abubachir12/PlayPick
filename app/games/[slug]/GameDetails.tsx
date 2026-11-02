@@ -164,6 +164,8 @@ export default function GameDetails({ params }: { params: Promise<{ slug: string
   if (state.missing) {
     return (
       <EmptyState title="Игра не найдена">
+        <title>Игра не найдена — PlayPick</title>
+        <p>Возможно, ссылка устарела или игру ещё не добавили в каталог.</p>
         <Link href="/games" className="secondary-button small">В каталог</Link>
       </EmptyState>
     );

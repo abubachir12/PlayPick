@@ -19,13 +19,28 @@ const sorts = [
 type Filters = { genres: string[]; platforms: string[] };
 type CatalogPage = { games: Game[]; total: number; totalPages: number };
 
-// Only forward known parameters; the API rejects malformed ones with 400.
-function apiQuery(params: URLSearchParams) {
+const SORTS = new Set(sorts.map((option) => option.value));
+
+// A hand-edited URL must not turn into an API error: invalid page and sort values fall back to defaults.
+function readParams(params: URLSearchParams) {
+  const rawPage = params.get("page") ?? "";
+  const rawSort = params.get("sort") ?? "";
+  return {
+    search: params.get("search")?.trim() ?? "",
+    genre: params.get("genre")?.trim() ?? "",
+    platform: params.get("platform")?.trim() ?? "",
+    sort: SORTS.has(rawSort) ? rawSort : "title",
+    page: /^[1-9]\d{0,5}$/.test(rawPage) ? Number(rawPage) : 1,
+  };
+}
+
+function apiQuery({ search, genre, platform, sort, page }: ReturnType<typeof readParams>) {
   const query = new URLSearchParams();
-  for (const name of ["search", "genre", "platform", "sort", "page"]) {
-    const value = params.get(name)?.trim();
-    if (value) query.set(name, value);
-  }
+  if (search) query.set("search", search.slice(0, 200));
+  if (genre) query.set("genre", genre.slice(0, 200));
+  if (platform) query.set("platform", platform.slice(0, 200));
+  if (sort !== "title") query.set("sort", sort);
+  if (page > 1) query.set("page", String(page));
   query.set("limit", String(PAGE_SIZE));
   return query.toString();
 }
@@ -34,13 +49,9 @@ export default function CatalogView() {
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const queryKey = apiQuery(params);
-
-  const search = params.get("search") ?? "";
-  const genre = params.get("genre") ?? "";
-  const platform = params.get("platform") ?? "";
-  const sort = params.get("sort") ?? "title";
-  const page = Math.max(1, Number(params.get("page")) || 1);
+  const current = readParams(params);
+  const queryKey = apiQuery(current);
+  const { search, genre, platform, sort, page } = current;
 
   const [searchDraft, setSearchDraft] = useState(search);
   const [filters, setFilters] = useState<Filters | null>(null);
@@ -186,8 +197,20 @@ export default function CatalogView() {
         <ErrorState message={result.error} onRetry={() => setAttempt((value) => value + 1)} />
       )}
 
-      {data && data.games.length === 0 && (
+      {data && data.games.length === 0 && data.total > 0 && (
+        <EmptyState title="Такой страницы нет">
+          <p>В каталоге {data.totalPages} {pluralize(data.totalPages, "страница", "страницы", "страниц")}.</p>
+          <button type="button" className="secondary-button small" onClick={() => update({ page: "" }, false)}>
+            На первую страницу
+          </button>
+        </EmptyState>
+      )}
+
+      {data && data.total === 0 && (
         <EmptyState title={hasFilters ? "Ничего не нашлось" : "Каталог пока пуст"}>
+          {/[а-яё]/i.test(search) && (
+            <p>Названия игр в каталоге на английском — попробуй, например, «Witcher» вместо «Ведьмак».</p>
+          )}
           {hasFilters ? (
             <button type="button" className="secondary-button small" onClick={() => {
               setSearchDraft("");
@@ -196,7 +219,7 @@ export default function CatalogView() {
               Сбросить фильтры
             </button>
           ) : (
-            <p>Игры добавляются командой <code>npm run import:games</code>.</p>
+            <p>Игры ещё не загружены. Загляни чуть позже.</p>
           )}
         </EmptyState>
       )}

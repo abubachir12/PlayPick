@@ -18,7 +18,7 @@ import {
 import type { Game } from "@/types/game";
 import type { RecommendationResponse } from "@/types/recommendation";
 import { requestJson } from "@/lib/api-client";
-import { formatCount, formatRating, releaseYear } from "@/lib/format";
+import { formatCount, formatRating, pluralize, releaseYear } from "@/lib/format";
 import GameCard from "./components/GameCard";
 import { FavoriteButton } from "./components/LibraryButtons";
 import { GridSkeleton } from "./components/States";
@@ -181,6 +181,9 @@ export default function Home() {
   const total = sample && sample !== "error" ? Number(sample.headers.get("X-Total-Count")) || 0 : undefined;
   const filterData = ready(filters);
   const value = (count?: number) => count === undefined ? "—" : formatCount(count);
+  // While stats load the label uses the plural form, matching the dash placeholder.
+  const label = (count: number | undefined, one: string, few: string, many: string) =>
+    count === undefined ? many : pluralize(count, one, few, many);
   const topGames = ready(top);
   const freshGames = ready(fresh);
   const sampleGames = ready(sample);
@@ -241,7 +244,7 @@ export default function Home() {
 
               <div className="hero-stat-content">
                 <strong>{value(total)}</strong>
-                <span>игр в базе</span>
+                <span>{label(total, "игра", "игры", "игр")} в базе</span>
               </div>
             </div>
 
@@ -252,7 +255,7 @@ export default function Home() {
 
               <div className="hero-stat-content">
                 <strong>{value(filterData?.genres.length)}</strong>
-                <span>жанров</span>
+                <span>{label(filterData?.genres.length, "жанр", "жанра", "жанров")}</span>
               </div>
             </div>
 
@@ -263,7 +266,7 @@ export default function Home() {
 
               <div className="hero-stat-content">
                 <strong>{value(filterData?.platforms.length)}</strong>
-                <span>платформ</span>
+                <span>{label(filterData?.platforms.length, "платформа", "платформы", "платформ")}</span>
               </div>
             </div>
 
