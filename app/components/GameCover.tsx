@@ -19,10 +19,11 @@ function initials(title: string) {
   return words.slice(0, 2).map((word) => word[0]).join("").toUpperCase() || "?";
 }
 
-export default function GameCover({ src, title, className = "" }: {
+export default function GameCover({ src, title, className = "", eager = false }: {
   src?: string | null;
   title: string;
   className?: string;
+  eager?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
 
@@ -41,7 +42,7 @@ export default function GameCover({ src, title, className = "" }: {
       src={src}
       alt={`Обложка ${title}`}
       className={`game-cover ${className}`}
-      loading="lazy"
+      loading={eager ? "eager" : "lazy"}
       onError={() => setFailed(true)}
     />
   );

@@ -9,6 +9,7 @@ import { formatRating, formatReleaseDate, releaseYear } from "@/lib/format";
 import GameCard from "../../components/GameCard";
 import GameCover from "../../components/GameCover";
 import { FavoriteButton, PlayedButton } from "../../components/LibraryButtons";
+import ShareButton from "../../components/ShareButton";
 import { EmptyState, ErrorState } from "../../components/States";
 
 export function GameDetailsSkeleton() {
@@ -209,6 +210,7 @@ export default function GameDetails({ params }: { params: Promise<{ slug: string
           <div className="game-hero-actions">
             <FavoriteButton game={game} withLabel />
             <PlayedButton game={game} />
+            <ShareButton title={`${game.title} — PlayPick`} />
           </div>
         </div>
       </section>

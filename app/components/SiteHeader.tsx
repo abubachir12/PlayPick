@@ -1,11 +1,11 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import Form from "next/form";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Heart, Menu, Search, X } from "lucide-react";
+import { Heart, Menu, X } from "lucide-react";
 import { useLibrary } from "@/lib/use-library";
+import SearchBox from "./SearchBox";
 
 const links = [
   { href: "/", label: "Главная" },
@@ -46,6 +46,13 @@ export default function SiteHeader() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+    const onKey = (event: KeyboardEvent) => event.key === "Escape" && setIsMobileMenuOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isMobileMenuOpen]);
   const favoritesCount = library.favorites.length;
   const closeMenu = () => setIsMobileMenuOpen(false);
 
@@ -67,18 +74,7 @@ export default function SiteHeader() {
         <nav className="desktop-nav">{navLinks}</nav>
 
         <div className="profile-bar">
-          <Form action="/games" className="search-wrapper" role="search">
-            <Search size={16} className="search-icon" />
-
-            <input
-              className="search"
-              type="search"
-              name="search"
-              maxLength={200}
-              placeholder="Поиск игр..."
-              aria-label="Поиск игр"
-            />
-          </Form>
+          <SearchBox autoFocusShortcut />
 
           <Link
             href="/favorites"
@@ -104,17 +100,7 @@ export default function SiteHeader() {
 
       {isMobileMenuOpen && (
         <nav className="mobile-nav" id="mobile-navigation">
-          <Form action="/games" className="mobile-search" role="search" onSubmit={closeMenu}>
-            <Search size={16} className="search-icon" />
-            <input
-              className="search"
-              type="search"
-              name="search"
-              maxLength={200}
-              placeholder="Поиск игр..."
-              aria-label="Поиск игр"
-            />
-          </Form>
+          <SearchBox className="mobile-search" onNavigate={closeMenu} />
           {navLinks}
         </nav>
       )}

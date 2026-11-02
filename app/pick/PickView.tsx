@@ -10,6 +10,7 @@ import { readLibrary, useLibrary } from "@/lib/use-library";
 import { formatCount, pluralize } from "@/lib/format";
 import GameCard from "../components/GameCard";
 import { PlayedButton } from "../components/LibraryButtons";
+import ShareButton from "../components/ShareButton";
 import { EmptyState, ErrorState, GridSkeleton } from "../components/States";
 
 const moodIcons: Record<Mood, typeof Coffee> = {
@@ -69,11 +70,16 @@ export default function PickView() {
   const [moods, setMoods] = useState(fallbackMoods);
   const [filters, setFilters] = useState<Filters>({ genres: [], platforms: [] });
 
+  // A shared link restores the whole form: /pick?mood=story&platform=PC&genres=RPG,Indie&time=30
   const initialMood = params.get("mood");
+  const initialTime = Number(params.get("time"));
   const [mood, setMood] = useState<Mood | null>(isMood(initialMood, fallbackMoods) ? initialMood : null);
-  const [platform, setPlatform] = useState("");
-  const [genres, setGenres] = useState<string[]>([]);
-  const [sessionMinutes, setSessionMinutes] = useState<number | null>(null);
+  const [platform, setPlatform] = useState(() => params.get("platform")?.slice(0, 200) ?? "");
+  const [genres, setGenres] = useState<string[]>(() => (params.get("genres") ?? "")
+    .split(",").map((name) => name.trim()).filter((name) => name && name.length <= 200).slice(0, MAX_GENRES));
+  const [sessionMinutes, setSessionMinutes] = useState<number | null>(
+    sessionChoices.includes(initialTime) ? initialTime : null,
+  );
   const [includeUnknownSession, setIncludeUnknownSession] = useState(true);
   const [skipPlayed, setSkipPlayed] = useState(true);
 
@@ -105,6 +111,13 @@ export default function PickView() {
       body.sessionMinutes = sessionMinutes;
       body.includeUnknownSession = includeUnknownSession;
     }
+
+    const query = new URLSearchParams({ mood });
+    if (platform) query.set("platform", platform);
+    if (sessionMinutes) query.set("time", String(sessionMinutes));
+    // Commas stay readable in shared links; each genre name is still encoded on its own.
+    const genreQuery = genres.length ? `&genres=${genres.map(encodeURIComponent).join(",")}` : "";
+    router.replace(`/pick?${query}${genreQuery}`, { scroll: false });
 
     setLoading(true);
     setError(null);
@@ -263,16 +276,19 @@ export default function PickView() {
                       {formatCount(result.meta.eligibleCount)} {pluralize(result.meta.eligibleCount, "игра", "игры", "игр")}
                     </span>
                   </h2>
-                  <button
-                    type="button"
-                    className="secondary-button small"
-                    onClick={() => {
-                      const item = result.items[Math.floor(Math.random() * result.items.length)];
-                      router.push(`/games/${encodeURIComponent(item.game.slug)}`);
-                    }}
-                  >
-                    <Dices size={16} /> Мне повезёт
-                  </button>
+                  <div className="heading-actions">
+                    <ShareButton title="Подборка PlayPick" label="Поделиться подборкой" className="secondary-button small" />
+                    <button
+                      type="button"
+                      className="secondary-button small"
+                      onClick={() => {
+                        const item = result.items[Math.floor(Math.random() * result.items.length)];
+                        router.push(`/games/${encodeURIComponent(item.game.slug)}`);
+                      }}
+                    >
+                      <Dices size={16} /> Мне повезёт
+                    </button>
+                  </div>
                 </div>
                 {result.meta.session.unknownIncluded > 0 && (
                   <p className="hint result-note">
