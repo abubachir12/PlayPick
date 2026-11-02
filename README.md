@@ -3,6 +3,8 @@
 Сервис для поиска игр по настроению, свободному времени и предпочтениям.
 Стек: Next.js App Router, TypeScript, Drizzle ORM, Neon PostgreSQL. Источник каталога — RAWG.
 
+Сайт: https://playpick-delta.vercel.app (Vercel, production-ветка указана в настройках проекта).
+
 ## Локальный запуск
 
 ```bash
