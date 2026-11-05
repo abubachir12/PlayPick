@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { ilike, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { games } from "@/db/schema";
-import { buildAnswerMessages, buildExtractionMessages, ConsultantError, parseAnswer, parseChatRequest, parseExtraction } from "@/lib/consultant.mjs";
+import { buildAnswerMessages, buildExtractionMessages, ConsultantError, extractLocally, parseAnswer, parseChatRequest,
+  parseExtraction } from "@/lib/consultant.mjs";
 import { readJsonBody, RequestBodyError } from "@/lib/http.mjs";
 import { chatCompletion, llmConfigured } from "@/lib/llm";
 import { escapeLike } from "@/lib/catalog-query.mjs";
@@ -41,10 +42,17 @@ export async function POST(request: Request) {
     const genres = [...new Set(catalog.flatMap((game) => game.genres ?? []))].sort();
     const platforms = [...new Set(catalog.flatMap((game) => game.platforms ?? []))].sort();
 
-    const extraction = parseExtraction(
-      await chatCompletion(buildExtractionMessages(messages, { genres, platforms }), { maxTokens: 300, temperature: 0 }),
-      { genres, platforms },
-    );
+    // If the model is busy for the understanding step, a keyword reading keeps the consultant answering.
+    let extraction;
+    try {
+      extraction = parseExtraction(
+        await chatCompletion(buildExtractionMessages(messages, { genres, platforms }), { maxTokens: 300, temperature: 0 }),
+        { genres, platforms },
+      );
+    } catch (error) {
+      if (!(error instanceof ConsultantError) || error.status === 503) throw error;
+      extraction = extractLocally(messages, { genres, platforms });
+    }
 
     // "Like Hollow Knight" becomes a taste signal: matched titles are treated as liked games for ranking.
     const similar = extraction.similarTo.length

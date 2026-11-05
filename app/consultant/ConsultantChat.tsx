@@ -41,6 +41,17 @@ export default function ConsultantChat() {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [turns, busy]);
 
+  // Free models can take half a minute; say so instead of looking frozen.
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (!busy) return;
+    const timer = window.setTimeout(() => setSlow(true), 8000);
+    return () => {
+      window.clearTimeout(timer);
+      setSlow(false);
+    };
+  }, [busy]);
+
   async function send(text: string) {
     const content = text.trim();
     if (!content || busy) return;
@@ -100,7 +111,10 @@ export default function ConsultantChat() {
         {busy && (
           <div className="chat-turn assistant">
             <span className="chat-avatar" aria-hidden="true"><Sparkles size={16} /></span>
-            <p className="chat-bubble chat-typing" aria-label="Консультант печатает"><span /><span /><span /></p>
+            <div className="chat-body">
+              <p className="chat-bubble chat-typing" aria-label="Консультант печатает"><span /><span /><span /></p>
+              {slow && <p className="hint">Бесплатный ИИ думает дольше обычного — обычно до минуты…</p>}
+            </div>
           </div>
         )}
         <div ref={endRef} />

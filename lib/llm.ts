@@ -17,7 +17,8 @@ export function llmConfigured() {
 
 type Attempt = { ok: true; content: string } | { ok: false; status: number; retryable: boolean; reason: string };
 
-async function callModel(model: string, messages: LlmMessage[], options: { maxTokens: number; temperature?: number }): Promise<Attempt> {
+async function callModel(model: string, messages: LlmMessage[], options: { maxTokens: number; temperature?: number },
+  reasoningHint = true): Promise<Attempt> {
   const base = (process.env.AI_BASE_URL || DEFAULT_BASE_URL).replace(/\/+$/, "");
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -39,8 +40,8 @@ async function callModel(model: string, messages: LlmMessage[], options: { maxTo
         // Reasoning models spend tokens thinking before the visible answer; a low cap would leave the answer empty.
         max_tokens: Math.max(options.maxTokens, 2000),
         temperature: options.temperature ?? 0.6,
-        // OpenRouter-only hint to keep that thinking short; other providers may reject unknown fields.
-        ...(base.includes("openrouter.ai") ? { reasoning: { effort: "low" } } : {}),
+        // OpenRouter-only: the consultant needs no visible chain of thought, and skipping it halves the wait.
+        ...(reasoningHint && base.includes("openrouter.ai") ? { reasoning: { effort: "none" } } : {}),
       }),
     });
   } catch {
@@ -55,6 +56,8 @@ async function callModel(model: string, messages: LlmMessage[], options: { maxTo
   if (!response.ok) {
     // Provider messages ("Rate limit exceeded: free-models-per-day", "No endpoints found") never contain the key.
     const reason = typeof data?.error?.message === "string" ? data.error.message.slice(0, 200) : "";
+    // A model that cannot switch reasoning off rejects the hint: ask once more without it.
+    if (response.status === 400 && reasoningHint && base.includes("openrouter.ai")) return callModel(model, messages, options, false);
     return { ok: false, status: response.status, retryable: response.status === 429 || response.status === 404 || response.status >= 500, reason };
   }
   const content = data?.choices?.[0]?.message?.content;

@@ -32,6 +32,19 @@ test("extraction accepts only known moods, genres and platforms, even from messy
   assert.deepEqual(buildExtractionMessages([{ role: "user", content: "хочу RPG" }], catalog)[1].content, "Пользователь: хочу RPG");
 });
 
+test("keyword fallback reads mood, genre, platform, price, length and English titles", async () => {
+  const { extractLocally } = await import("../lib/consultant.mjs");
+  const cat = { genres: ["RPG", "Shooter", "Puzzle"], platforms: ["PC", "PlayStation 5"] };
+  assert.deepEqual(extractLocally([{ role: "user", content: "Во что бесплатно поиграть с другом на ПК? Шутер" }], cat),
+    { mood: "social", genres: ["Shooter"], platform: "PC", similarTo: [], freeOnly: true, length: null, offTopic: false });
+  const story = extractLocally([{ role: "user", content: "Короткая игра с сюжетом как The Witcher 3, часов на 5, ps5" }], cat);
+  assert.equal(story.mood, "story");
+  assert.equal(story.length, "short");
+  assert.equal(story.platform, "PlayStation 5");
+  assert.deepEqual(story.similarTo, ["The Witcher 3"]);
+  assert.equal(extractLocally([{ role: "user", content: "просто посоветуй" }], cat).mood, "story");
+});
+
 test("answers can only show games we offered, and the ID line is stripped from the text", () => {
   const candidates = [candidate(1, "Alpha"), candidate(2, "Beta"), candidate(3, "Gamma")];
   const { reply, games } = parseAnswer("Попробуй [2] Beta и Gamma.\nИГРЫ: 2, 3, 99", candidates);
