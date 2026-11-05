@@ -33,7 +33,15 @@ async function callModel(model: string, messages: LlmMessage[], options: { maxTo
         "HTTP-Referer": process.env.AI_APP_URL || "https://playpick-delta.vercel.app",
         "X-Title": "PlayPick",
       },
-      body: JSON.stringify({ model, messages, max_tokens: options.maxTokens, temperature: options.temperature ?? 0.6 }),
+      body: JSON.stringify({
+        model,
+        messages,
+        // Reasoning models spend tokens thinking before the visible answer; a low cap would leave the answer empty.
+        max_tokens: Math.max(options.maxTokens, 2000),
+        temperature: options.temperature ?? 0.6,
+        // OpenRouter-only hint to keep that thinking short; other providers may reject unknown fields.
+        ...(base.includes("openrouter.ai") ? { reasoning: { effort: "low" } } : {}),
+      }),
     });
   } catch {
     return { ok: false, status: 504, retryable: true, reason: "timeout or network error" };
