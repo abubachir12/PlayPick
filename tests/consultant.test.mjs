@@ -51,6 +51,10 @@ test("answers can only show games we offered, and the ID line is stripped from t
   assert.equal(reply, "Попробуй Beta и Gamma.");
   assert.deepEqual(games.map((g) => g.id), [2, 3]);
   assert.deepEqual(parseAnswer("Без списка", candidates).games.map((g) => g.id), [1, 2, 3]);
+  const decorated = parseAnswer("## Совет\n**Gamma** — классика.\n\n**ИГРЫ: 3, 1**", candidates);
+  assert.equal(decorated.reply, "Совет\nGamma — классика.");
+  assert.deepEqual(decorated.games.map((g) => g.id), [3, 1]);
+  assert.deepEqual(parseAnswer("Возьми Gamma, а потом Beta.", candidates).games.map((g) => g.id), [3, 2]);
   const system = buildAnswerMessages([{ role: "user", content: "hi" }], candidates, { offTopic: false })[0].content;
   assert.match(system, /\[1\] Alpha \(2020\)/);
   assert.match(system, /ТОЛЬКО игры из списка/);
