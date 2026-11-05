@@ -9,7 +9,7 @@ import { PlayedButton } from "../components/LibraryButtons";
 import { EmptyState } from "../components/States";
 
 const tabs: { id: LibraryList; label: string; empty: string }[] = [
-  { id: "favorites", label: "Избранное", empty: "Сохраняй игры сердечком на карточке. Список хранится в этом браузере." },
+  { id: "favorites", label: "Избранное", empty: "Сохраняй игры сердечком на карточке — подбор начнёт учитывать твои вкусы." },
   { id: "played", label: "Пройдено", empty: "Игры, отмеченные «Уже играл», не попадают в подбор." },
 ];
 

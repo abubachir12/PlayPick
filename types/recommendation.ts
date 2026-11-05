@@ -1,13 +1,16 @@
 import type { Game } from "./game";
-import type { Mood, RecommendationResult } from "@/lib/recommendations.mjs";
+import type { GameLength, Mood, RecommendationResult } from "@/lib/recommendations.mjs";
 
 export interface RecommendationRequest {
   mood: Mood;
   platform?: string;
   preferredGenres?: string[];
   excludeIds?: number[];
+  likedIds?: number[];
   sessionMinutes?: number;
   includeUnknownSession?: boolean;
+  freeOnly?: boolean;
+  length?: GameLength;
   limit?: number;
 }
 

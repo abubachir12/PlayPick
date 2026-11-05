@@ -351,7 +351,10 @@ export default function Home() {
             <h2>Не можешь выбрать?</h2>
             <p>Отметь настроение и сколько есть времени — остальное PlayPick сделает сам.</p>
           </div>
-          <Link href="/pick" className="primary-button">Подобрать игру <ArrowRight size={16} /></Link>
+          <div className="heading-actions">
+            <Link href="/consultant" className="secondary-button">Спросить ИИ-консультанта</Link>
+            <Link href="/pick" className="primary-button">Подобрать игру <ArrowRight size={16} /></Link>
+          </div>
         </div>
       </section>
     </main>

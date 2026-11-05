@@ -11,7 +11,7 @@ export default function FavoritesPage() {
     <main className="page">
       <PageBanner
         title="Библиотека"
-        text="Избранное и пройденное хранятся в этом браузере — вход не нужен."
+        text="Избранное и пройденное. Войди в аккаунт — и списки будут на всех устройствах."
         image="/hero/rust.jpg"
       />
       <FavoritesView />

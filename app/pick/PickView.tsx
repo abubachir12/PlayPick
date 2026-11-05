@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { BookOpen, Coffee, Compass, Dices, Sparkles, Sword, Users } from "lucide-react";
-import type { Mood } from "@/lib/recommendations.mjs";
+import { BookOpen, Coffee, Compass, Dices, Heart, Sparkles, Sword, Users } from "lucide-react";
+import type { GameLength, Mood } from "@/lib/recommendations.mjs";
 import type { RecommendationRequest, RecommendationResponse } from "@/types/recommendation";
 import { errorMessage, requestJson } from "@/lib/api-client";
 import { readLibrary, useLibrary } from "@/lib/use-library";
@@ -42,6 +42,13 @@ function isMood(value: string | null, moods: { id: Mood }[]): value is Mood {
   return moods.some((mood) => mood.id === value);
 }
 
+// RAWG average playtime of the whole game; the same bounds as LENGTHS in lib/recommendations.mjs.
+const lengthChoices: { id: GameLength; label: string }[] = [
+  { id: "short", label: "Короткие — до 8 ч" },
+  { id: "medium", label: "Средние — 8–25 ч" },
+  { id: "long", label: "Длинные — от 25 ч" },
+];
+
 function minutesLabel(minutes: number) {
   return minutes < 60 ? `${minutes} мин` : `${minutes / 60} ${pluralize(minutes / 60, "час", "часа", "часов")}`;
 }
@@ -50,12 +57,18 @@ function minutesLabel(minutes: number) {
 function MatchSummary({ item }: { item: Item }) {
   const matched = item.reasons.filter((reason) => reason.code.startsWith("mood-")).map((reason) => reason.value);
   const favorite = item.reasons.filter((reason) => reason.code === "preferred-genre").map((reason) => reason.value);
+  const taste = item.reasons.find((reason) => reason.code === "taste");
+  const critics = item.reasons.find((reason) => reason.code === "critics");
+  const length = item.reasons.find((reason) => reason.code === "length");
   const { sessionFit } = item;
 
   return (
     <div className="match">
+      {taste && <p className="match-taste"><Heart size={12} fill="currentColor" /> Похоже на «{taste.value}»</p>}
       {matched.length > 0 && <p><span>Совпало</span> {matched.join(", ")}</p>}
       {favorite.length > 0 && <p><span>Любимый жанр</span> {favorite.join(", ")}</p>}
+      {critics && <p><span>Критики</span> Metacritic {critics.value}</p>}
+      {length && <p><span>Длина</span> ≈ {length.value} ч</p>}
       {sessionFit.status === "estimated-fit" && sessionFit.minimumMinutes && (
         <p title={sessionFit.note ?? undefined}><span>Сессия</span> от {sessionFit.minimumMinutes} мин, оценка PlayPick</p>
       )}
@@ -82,6 +95,12 @@ export default function PickView() {
   );
   const [includeUnknownSession, setIncludeUnknownSession] = useState(true);
   const [skipPlayed, setSkipPlayed] = useState(true);
+  const [useTaste, setUseTaste] = useState(true);
+  const [freeOnly, setFreeOnly] = useState(() => params.get("free") === "1");
+  const [length, setLength] = useState<GameLength | "">(() => {
+    const value = params.get("length");
+    return value === "short" || value === "medium" || value === "long" ? value : "";
+  });
 
   const [result, setResult] = useState<RecommendationResponse | null>(null);
   const [shownIds, setShownIds] = useState<number[]>([]);
@@ -100,13 +119,18 @@ export default function PickView() {
   async function run(options: { more?: boolean } = {}) {
     if (!mood) return;
     // Read storage directly: the auto-start runs before the hydrated library reaches this closure.
-    const playedIds = skipPlayed ? readLibrary().played.map((game) => game.id) : [];
+    const stored = readLibrary();
+    const playedIds = skipPlayed ? stored.played.map((game) => game.id) : [];
+    const likedIds = useTaste ? stored.favorites.map((game) => game.id).slice(0, MAX_EXCLUDED) : [];
     const previous = options.more ? shownIds : [];
     const excludeIds = [...new Set([...playedIds, ...previous])].slice(0, MAX_EXCLUDED);
     const body: RecommendationRequest = { mood, limit: RESULT_LIMIT };
     if (platform) body.platform = platform;
     if (genres.length) body.preferredGenres = genres;
     if (excludeIds.length) body.excludeIds = excludeIds;
+    if (likedIds.length) body.likedIds = likedIds;
+    if (freeOnly) body.freeOnly = true;
+    if (length) body.length = length;
     if (sessionMinutes) {
       body.sessionMinutes = sessionMinutes;
       body.includeUnknownSession = includeUnknownSession;
@@ -115,6 +139,8 @@ export default function PickView() {
     const query = new URLSearchParams({ mood });
     if (platform) query.set("platform", platform);
     if (sessionMinutes) query.set("time", String(sessionMinutes));
+    if (length) query.set("length", length);
+    if (freeOnly) query.set("free", "1");
     // Commas stay readable in shared links; each genre name is still encoded on its own.
     const genreQuery = genres.length ? `&genres=${genres.map(encodeURIComponent).join(",")}` : "";
     router.replace(`/pick?${query}${genreQuery}`, { scroll: false });
@@ -206,6 +232,14 @@ export default function PickView() {
               {sessionChoices.map((minutes) => <option key={minutes} value={minutes}>{minutesLabel(minutes)}</option>)}
             </select>
           </label>
+
+          <label className="field labeled">
+            <span>Длина игры</span>
+            <select value={length} onChange={(event) => setLength(event.target.value as GameLength | "")}>
+              <option value="">Любая</option>
+              {lengthChoices.map((choice) => <option key={choice.id} value={choice.id}>{choice.label}</option>)}
+            </select>
+          </label>
         </div>
 
         {filters.genres.length > 0 && (
@@ -233,6 +267,18 @@ export default function PickView() {
 
         <div className="pick-footer">
           <div className="pick-options">
+            <label className="checkbox">
+              <input type="checkbox" checked={useTaste} onChange={(event) => setUseTaste(event.target.checked)}
+                disabled={library.favorites.length === 0} />
+              Учитывать мои вкусы по избранному
+              <span className="hint">
+                {library.favorites.length ? library.favorites.length : "добавь игры в избранное"}
+              </span>
+            </label>
+            <label className="checkbox">
+              <input type="checkbox" checked={freeOnly} onChange={(event) => setFreeOnly(event.target.checked)} />
+              Только бесплатные
+            </label>
             <label className="checkbox">
               <input type="checkbox" checked={skipPlayed} onChange={(event) => setSkipPlayed(event.target.checked)} />
               Скрыть игры, в которые уже играл

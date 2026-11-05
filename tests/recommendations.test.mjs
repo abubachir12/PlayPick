@@ -10,7 +10,7 @@ const post = (body, headers = { "content-type": "application/json" }) => new Req
 
 test("preference defaults and normalized duplicate names and local IDs", () => {
   assert.deepEqual(parse({ mood: "story" }), { mood: "story", platform: null, preferredGenres: [], excludeIds: [],
-    sessionMinutes: null, includeUnknownSession: true, limit: 6 });
+    likedIds: [], sessionMinutes: null, includeUnknownSession: true, freeOnly: false, length: null, limit: 6 });
   const p = parse({ mood: "story", platform: " PC ", preferredGenres: [" RPG ", "rpg"], excludeIds: [1, 1], sessionMinutes: 30 });
   assert.equal(p.platform, "PC");
   assert.equal(p.preferredGenres.length, 1);
@@ -25,6 +25,8 @@ test("invalid types, unknown keys, unsupported moods and bounds are rejected", (
       { excludeIds: Array(101).fill(1) }, { limit: 0 }, { limit: 21 }, { limit: "6" }, { limit: 1.5 },
       { sessionMinutes: 4 }, { sessionMinutes: 241 }, { sessionMinutes: null }, { sessionMinutes: "30" },
       { sessionMinutes: 30, includeUnknownSession: "false" }, { includeUnknownSession: false },
+      { likedIds: [0] }, { likedIds: "1" }, { likedIds: Array(101).fill(1) }, { freeOnly: "yes" },
+      { length: "epic" }, { length: 8 },
     ].map((p) => ({ mood: "story", ...p }))]) {
     assert.throws(() => parse(input), RecommendationError);
   }
@@ -123,6 +125,55 @@ test("verified editorial session profiles apply only by RAWG ID and exclude insu
   assert.ok(enough.items[0].sessionFit.sourceUrl.startsWith("https://www.rocketleague.com/"));
   assert.deepEqual(rank(games, parse({ mood: "social", sessionMinutes: 5, includeUnknownSession: false })).items, []);
   assert.equal(rank(games, parse({ mood: "social" })).items[0].sessionFit.status, "not-requested");
+});
+
+test("liked games pull similar games up, explain it, and are not recommended again", () => {
+  const liked = game(10, { title: "Hollow Knight", tags: ["Difficult", "Metroidvania", "Souls-like"], genres: ["Platformer"] });
+  const similar = game(20, { tags: ["Difficult", "Metroidvania"], genres: ["Platformer"] });
+  const other = game(5, { tags: ["Difficult", "PvP"], genres: ["Shooter"], rating: 5 });
+  const without = rank([liked, similar, other], parse({ mood: "challenge" }));
+  const withTaste = rank([liked, similar, other], parse({ mood: "challenge", likedIds: [10] }));
+  assert.ok(!withTaste.items.some((item) => item.game.id === 10));
+  assert.equal(withTaste.meta.likedUsed, 1);
+  const before = without.items.find((item) => item.game.id === 20).score;
+  const after = withTaste.items.find((item) => item.game.id === 20);
+  assert.ok(after.score > before);
+  assert.ok(after.reasons.some((r) => r.code === "taste" && r.value === "Hollow Knight"));
+  assert.ok(!withTaste.items.find((item) => item.game.id === 5).reasons.some((r) => r.code === "taste"));
+});
+
+test("free-only and game length are hard filters; unknown playtime does not pass a length filter", () => {
+  const games = [game(1, { tags: ["Co-op", "Free to Play"], playtime: 3 }), game(2, { tags: ["Co-op"], playtime: 40 }),
+    game(3, { tags: ["Co-op"], playtime: 0 }), game(4, { tags: ["Co-op"], genres: ["Free to Play"], playtime: 12 })];
+  assert.deepEqual(rank(games, parse({ mood: "social", freeOnly: true })).items.map((i) => i.game.id).sort(), [1, 4]);
+  assert.deepEqual(rank(games, parse({ mood: "social", length: "short" })).items.map((i) => i.game.id), [1]);
+  assert.deepEqual(rank(games, parse({ mood: "social", length: "long" })).items.map((i) => i.game.id), [2]);
+  assert.ok(rank(games, parse({ mood: "social", length: "medium" })).items[0].reasons.some((r) => r.code === "length"));
+});
+
+test("one developer does not fill the page when others are close", () => {
+  const games = [1, 2, 3].map((id) => game(id, { tags: ["Story Rich"], developer: "Valve", rating: 5 }))
+    .concat(game(4, { tags: ["Story Rich"], developer: "Indie", rating: 4 }));
+  const ids = rank(games, parse({ mood: "story", limit: 2 })).items.map((i) => i.game.id);
+  assert.deepEqual(ids, [1, 4]);
+});
+
+test("one series does not fill the page either", async () => {
+  const { seriesKey } = await import("../lib/recommendations.mjs");
+  assert.equal(seriesKey("Grand Theft Auto: San Andreas"), "grand theft auto");
+  assert.equal(seriesKey("Grand Theft Auto IV"), "grand theft auto");
+  assert.equal(seriesKey("The Witcher 3: Wild Hunt"), "witcher");
+  assert.equal(seriesKey("Portal 2"), "portal");
+  assert.equal(seriesKey("Hades"), "hades");
+  const games = [game(1, { title: "Saga II", tags: ["Story Rich"], rating: 5 }), game(2, { title: "Saga: Origins", tags: ["Story Rich"], rating: 5 }),
+    game(3, { title: "Other Story", tags: ["Story Rich"], rating: 3 })];
+  assert.deepEqual(rank(games, parse({ mood: "story", limit: 2 })).items.map((i) => i.game.id), [1, 3]);
+});
+
+test("strongest mood evidence is explained first and critics are credited", () => {
+  const result = rank([game(1, { tags: ["Narration", "Story Rich"], metacritic: 92 })], parse({ mood: "story" }));
+  assert.equal(result.items[0].reasons[0].value, "Story Rich");
+  assert.ok(result.items[0].reasons.some((r) => r.code === "critics" && r.value === "92"));
 });
 
 test("options expose all supported moods and actual request bounds", () => {

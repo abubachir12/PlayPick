@@ -3,14 +3,16 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Heart, Menu, X } from "lucide-react";
+import { Heart, Menu, UserRound, X } from "lucide-react";
 import { useLibrary } from "@/lib/use-library";
+import { useSession } from "@/lib/use-session";
 import SearchBox from "./SearchBox";
 
 const links = [
   { href: "/", label: "Главная" },
   { href: "/games", label: "Игры" },
   { href: "/pick", label: "Подбор" },
+  { href: "/consultant", label: "Консультант" },
   { href: "/favorites", label: "Избранное" },
 ];
 
@@ -39,6 +41,7 @@ export default function SiteHeader() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const { library } = useLibrary();
+  const session = useSession();
 
   useEffect(() => {
     const onScroll = () => setIsScrolled(window.scrollY > 8);
@@ -84,6 +87,16 @@ export default function SiteHeader() {
             <Heart size={18} />
             {favoritesCount > 0 && <span className="header-badge">{favoritesCount}</span>}
           </Link>
+
+          {session.user ? (
+            <Link href="/account" className="header-avatar-link" aria-label={`Аккаунт: ${session.user.name}`} title={session.user.name}>
+              {session.user.name.slice(0, 1).toUpperCase()}
+            </Link>
+          ) : (
+            <Link href="/login" className={`header-login ${session.status === "loading" ? "is-loading" : ""}`}>
+              <UserRound size={16} /> <span>Войти</span>
+            </Link>
+          )}
         </div>
 
         <button
@@ -102,6 +115,9 @@ export default function SiteHeader() {
         <nav className="mobile-nav" id="mobile-navigation">
           <SearchBox className="mobile-search" onNavigate={closeMenu} />
           {navLinks}
+          <Link href={session.user ? "/account" : "/login"} onClick={closeMenu}>
+            {session.user ? `Аккаунт · ${session.user.name}` : "Войти"}
+          </Link>
         </nav>
       )}
     </header>
