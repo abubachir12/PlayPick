@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      # The build never connects to the database; lib/db.ts only needs the variable to exist.
+      - run: npm run build
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost/ci?sslmode=require
+          NEXT_TELEMETRY_DISABLED: 1
