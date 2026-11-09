@@ -37,6 +37,8 @@ export default function SiteFooter() {
           {/* RAWG requires a visible active link on pages that show its data. */}
           <a href="https://rawg.io/" target="_blank" rel="noopener noreferrer">Данные об играх: RAWG</a>
           <a href="https://rawg.io/apidocs" target="_blank" rel="noopener noreferrer">RAWG API</a>
+          <a href="https://store.steampowered.com/" target="_blank" rel="noopener noreferrer">Steam</a>
+          <a href="https://steamspy.com/" target="_blank" rel="noopener noreferrer">SteamSpy</a>
           <a href="https://github.com/abubachir12/PlayPick" target="_blank" rel="noopener noreferrer">Код на GitHub</a>
         </div>
       </div>

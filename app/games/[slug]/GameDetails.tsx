@@ -82,7 +82,9 @@ function ExternalLinks({ game }: { game: Game }) {
   const links = [
     // Local slugs come from RAWG, so the RAWG page exists only for RAWG-imported games.
     game.rawgId ? { href: `https://rawg.io/games/${encodeURIComponent(game.slug)}`, label: "Страница на RAWG" } : null,
-    { href: `https://store.steampowered.com/search/?term=${query}`, label: "Найти в Steam" },
+    game.steamId
+      ? { href: `https://store.steampowered.com/app/${game.steamId}/`, label: "Страница в Steam" }
+      : { href: `https://store.steampowered.com/search/?term=${query}`, label: "Найти в Steam" },
     { href: `https://www.youtube.com/results?search_query=${encodeURIComponent(`${game.title} trailer`)}`, label: "Трейлеры на YouTube" },
     { href: `https://www.metacritic.com/search/${query}/`, label: "Обзоры на Metacritic" },
   ].filter((link): link is { href: string; label: string } => Boolean(link));
@@ -109,7 +111,7 @@ function Description({ text }: { text: string }) {
   return (
     <div className="detail-block">
       <h2>Об игре</h2>
-      {/* Plain text from RAWG description_raw: never render it as HTML. */}
+      {/* Plain text (RAWG description_raw or stripped Steam text): never render it as HTML. */}
       <p className={`game-description ${long && !expanded ? "is-clamped" : ""}`}>{text}</p>
       {long && (
         <button type="button" className="text-link" onClick={() => setExpanded((value) => !value)}>
@@ -205,7 +207,7 @@ export default function GameDetails({ params }: { params: Promise<{ slug: string
           {rating && (
             <p className="game-hero-rating">
               <Star size={18} fill="currentColor" /> {rating}
-              <span>/ 5 · оценка игроков RAWG</span>
+              <span>/ 5 · {game.steamId && !game.rawgId ? "по отзывам в Steam" : "оценка игроков RAWG"}</span>
             </p>
           )}
 

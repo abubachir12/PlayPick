@@ -323,7 +323,7 @@ export default function Home() {
 
       {top !== "error" && (
         <section className="page-section reveal">
-          <SectionHeading title="Лучшие по оценкам" text="Средняя оценка игроков RAWG." href="/games?sort=rating" />
+          <SectionHeading title="Лучшие по оценкам" text="Средняя оценка игроков RAWG и отзывы Steam." href="/games?sort=rating" />
           {topGames ? (
             <div className="game-grid">
               {topGames.map((game) => <GameCard key={game.id} game={game} />)}

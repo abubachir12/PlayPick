@@ -11,6 +11,7 @@
     "test:db": "node --test tests/*.integration.mjs",
     "import:games": "node scripts/import-games.mjs",
     "collect:rawg": "node scripts/collect-rawg.mjs",
+    "collect:steam": "node scripts/collect-steam.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"
   },

@@ -16,7 +16,7 @@ export const games = pgTable("games", {
 
   igdbId: integer("igdb_id").unique(),
   rawgId: integer("rawg_id").unique(),
-  steamId: integer("steam_id"),
+  steamId: integer("steam_id").unique(),
 
   slug: text("slug").notNull().unique(),
   title: text("title").notNull(),

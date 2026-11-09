@@ -1,7 +1,8 @@
 # PlayPick
 
 Сервис для поиска игр по настроению, свободному времени и предпочтениям.
-Стек: Next.js App Router, TypeScript, Drizzle ORM, Neon PostgreSQL. Источник каталога — RAWG.
+Стек: Next.js App Router, TypeScript, Drizzle ORM, Neon PostgreSQL. Источники каталога — RAWG
+(основной) и Steam + SteamSpy (второй, без ключа).
 
 Сайт: https://playpick-delta.vercel.app (Vercel, production-ветка указана в настройках проекта).
 
@@ -175,6 +176,28 @@ npm run import:games -- data/rawg-page-2.json
 ```
 
 Каждая страница — 41 запрос к RAWG. Повторные игры обновляются по rawgId.
+
+### Второй источник: Steam + SteamSpy
+
+Когда RAWG недоступен (в ноябре 2026 он несколько дней отвечал 522), каталог пополняется из Steam
+(`lib/steam.mjs`, миграция `0003_steam_source` — уникальный `steam_id`). Ключ не нужен.
+
+```bash
+npm run collect:steam -- data/steam-1.json --limit 100
+npm run import:games -- data/steam-1.json --dry-run
+npm run import:games -- data/steam-1.json
+```
+
+- Кандидаты — популярные игры SteamSpy с ≥ 2000 отзывов и ≥ 75% положительных, по числу отзывов.
+- Игры, которые уже есть в базе или в собранных `data/steam-*.json`, пропускаются: сравниваются steam_id
+  и нормализованные названия (без ™/®, «The», «Legacy», «Remastered», «GOTY Edition» и т. п.).
+- Отсеиваются программы, ещё не вышедшие игры и контент «только для взрослых»; причины копятся в
+  `data/steam-rejected.json`, чтобы повторный запуск не спрашивал их снова.
+- Поля: описание из магазина на русском (как текст, без HTML), жанры Steam приведены к названиям RAWG
+  (плюс Shooter/Puzzle/Platformer/Fighting из тегов), до 20 тегов сообщества SteamSpy, платформы PC/macOS/Linux,
+  рейтинг = доля положительных отзывов × 5, Metacritic из магазина, обложка — первый скриншот 1920×1080.
+- `playtime` = null: SteamSpy больше не публикует время игры, поэтому фильтр длины такие игры не показывает.
+- Темп запросов: SteamSpy ~1/с, магазин ~1 за 1,6 с; на 429 — пауза минута и повтор.
 
 ## Аккаунты
 
