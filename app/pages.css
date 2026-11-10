@@ -147,7 +147,9 @@ header.is-scrolled {
   margin-top: auto;
 }
 
+/* All free height goes above the title: a second auto margin here would park the text mid-screen. */
 .hero-stats {
+  margin-top: 0;
   padding-top: 56px;
 }
 
