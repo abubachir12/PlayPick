@@ -1,4 +1,5 @@
 import {
+  boolean,
   integer,
   date,
   index,
@@ -33,6 +34,21 @@ export const games = pgTable("games", {
   rating: real("rating"),
   metacritic: integer("metacritic"),
   playtime: integer("playtime"),
+
+  // Steam storefront data (Russian region), refreshed daily; null when the game is not on Steam.
+  // Prices are in minor units (kopecks); priceFinal is null when the game is not sold in the region.
+  isFree: boolean("is_free"),
+  priceFinal: integer("price_final"),
+  priceInitial: integer("price_initial"),
+  discountPercent: integer("discount_percent"),
+  priceCurrency: text("price_currency"),
+  // Concurrent players from SteamSpy.
+  playersNow: integer("players_now"),
+  screenshots: jsonb("screenshots").$type<string[]>(),
+  trailer: jsonb("trailer").$type<{ name: string; thumbnail: string; hls: string }>(),
+  requirements: text("requirements"),
+  hasRussian: boolean("has_russian"),
+  marketUpdatedAt: timestamp("market_updated_at"),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

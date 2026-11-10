@@ -2,14 +2,18 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowRight,
   BookOpen,
   Coffee,
   Compass,
   Gamepad2,
+  Heart,
   LibraryBig,
+  MessageCircle,
   Monitor,
+  SlidersHorizontal,
   Sparkles,
   Star,
   Sword,
@@ -18,7 +22,9 @@ import {
 import type { Game } from "@/types/game";
 import type { RecommendationResponse } from "@/types/recommendation";
 import { requestJson } from "@/lib/api-client";
-import { formatCount, formatRating, pluralize, releaseYear } from "@/lib/format";
+import { formatCompact, formatCount, formatRating, pluralize, releaseYear } from "@/lib/format";
+import { seriesKey } from "@/lib/recommendations.mjs";
+import CollectionCard, { type CollectionTile } from "./components/CollectionCard";
 import GameCard from "./components/GameCard";
 import { FavoriteButton } from "./components/LibraryButtons";
 import { GridSkeleton } from "./components/States";
@@ -176,7 +182,13 @@ function GenreTiles({ games, genres }: { games: Game[]; genres: string[] }) {
 
 export default function Home() {
   const [currentImage, setCurrentImage] = useState(0);
-  const top = useJson<Game[]>("/api/games?sort=rating&limit=8");
+  const [question, setQuestion] = useState("");
+  const router = useRouter();
+  // Twice as many as shown: sequels and remasters of one series are folded into a single card.
+  const top = useJson<Game[]>("/api/games?sort=rating&limit=24");
+  const popular = useJson<Game[]>("/api/games?sort=popular&limit=8");
+  const deals = useJson<Game[]>("/api/games?deal=1&sort=discount&limit=8");
+  const collections = useJson<CollectionTile[]>("/api/collections");
   const fresh = useJson<Game[]>("/api/games?sort=release-date&limit=4");
   const sample = useJson<Game[]>("/api/games?sort=rating&limit=100");
   const filters = useJson<Filters>("/api/catalog/filters");
@@ -197,7 +209,22 @@ export default function Home() {
   // While stats load the label uses the plural form, matching the dash placeholder.
   const label = (count: number | undefined, one: string, few: string, many: string) =>
     count === undefined ? many : pluralize(count, one, few, many);
-  const topGames = ready(top);
+  const topGames = useMemo(() => {
+    const list = ready(top);
+    if (!list) return null;
+    const seen = new Set<string>();
+    return list.filter((game) => {
+      // "The Last of Us Remastered" and "The Last of Us" are one entry for a showcase row.
+      const key = seriesKey(game.title.replace(/\s+(remastered|remake|legacy|goty|\(\d{4}\)|(definitive|enhanced|complete|game of the year) edition)$/i, ""));
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).slice(0, 8);
+  }, [top]);
+  // Games nobody is playing right now do not belong under "playing now".
+  const popularGames = ready(popular)?.filter((game) => (game.playersNow ?? 0) > 0) ?? null;
+  const dealGames = ready(deals);
+  const collectionTiles = ready(collections);
   const freshGames = ready(fresh);
   const sampleGames = ready(sample);
 
@@ -225,9 +252,29 @@ export default function Home() {
             и то, что тебе нравится.
           </p>
 
+          <form
+            className="hero-ask"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const text = question.trim();
+              router.push(text ? `/consultant?q=${encodeURIComponent(text)}` : "/consultant");
+            }}
+          >
+            <Sparkles size={18} aria-hidden="true" />
+            <label className="visually-hidden" htmlFor="hero-question">Вопрос ИИ-консультанту</label>
+            <input
+              id="hero-question"
+              value={question}
+              maxLength={300}
+              placeholder="Опиши словами: «кооператив на двоих без хоррора»"
+              onChange={(event) => setQuestion(event.target.value)}
+            />
+            <button type="submit">Спросить ИИ</button>
+          </form>
+
           <div className="hero-buttons">
             <Link href="/pick" className="primary-button">
-              Подобрать игру →
+              Подобрать по настроению →
             </Link>
 
             <Link href="/games" className="secondary-button">
@@ -319,7 +366,64 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="page-section reveal">
+        <SectionHeading title="Как это работает" text="Три способа найти игру — от «сам не знаю, чего хочу» до точного запроса." />
+        <ol className="steps">
+          <li>
+            <span className="step-icon"><MessageCircle size={20} /></span>
+            <strong>Спроси словами</strong>
+            <p>Напиши ИИ-консультанту, как другу: «что-нибудь уютное на вечер» — он ответит и покажет игры из каталога.</p>
+            <Link href="/consultant" className="text-link">К консультанту <ArrowRight size={14} /></Link>
+          </li>
+          <li>
+            <span className="step-icon"><SlidersHorizontal size={20} /></span>
+            <strong>Или выбери настроение</strong>
+            <p>Настроение, платформа, жанры и время. У каждой игры в подборке написано, почему она подошла.</p>
+            <Link href="/pick" className="text-link">К подбору <ArrowRight size={14} /></Link>
+          </li>
+          <li>
+            <span className="step-icon"><Heart size={20} /></span>
+            <strong>Сохрани, что понравилось</strong>
+            <p>Избранное учится на твоём вкусе: следующие подборки будут похожи на игры, которые ты отметил.</p>
+            <Link href="/favorites" className="text-link">В избранное <ArrowRight size={14} /></Link>
+          </li>
+        </ol>
+      </section>
+
+      {popularGames && popularGames.length >= 4 && (
+        <section className="page-section reveal">
+          <SectionHeading title="Сейчас играют" text="Самый большой онлайн в Steam на сегодня." href="/collections/playing-now" />
+          <div className="game-grid">
+            {popularGames.slice(0, 8).map((game) => (
+              <GameCard key={game.id} game={game}>
+                <p className="card-online"><span aria-hidden="true" /> {formatCompact(game.playersNow)} онлайн</p>
+              </GameCard>
+            ))}
+          </div>
+        </section>
+      )}
+
       {topGames && <Featured games={topGames} />}
+
+      {dealGames && dealGames.length >= 4 && (
+        <section className="page-section reveal">
+          <SectionHeading title="Сейчас со скидкой" text="Цены российского Steam, обновляются раз в день." href="/collections/deals" />
+          <div className="game-grid">
+            {dealGames.slice(0, 8).map((game) => <GameCard key={game.id} game={game} />)}
+          </div>
+        </section>
+      )}
+
+      {collectionTiles && collectionTiles.length > 0 && (
+        <section className="page-section reveal">
+          <SectionHeading title="Готовые подборки" text="Когда не хочется ничего настраивать." href="/collections" link="Все подборки" />
+          <div className="genre-grid">
+            {collectionTiles.filter((tile) => !["playing-now", "deals"].includes(tile.id)).slice(0, 8).map((tile) => (
+              <CollectionCard key={tile.id} tile={tile} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {top !== "error" && (
         <section className="page-section reveal">

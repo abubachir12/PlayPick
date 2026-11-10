@@ -24,6 +24,8 @@ export default function SiteFooter() {
           <h2>Разделы</h2>
           <Link href="/games">Каталог</Link>
           <Link href="/pick">Подбор</Link>
+          <Link href="/consultant">ИИ-консультант</Link>
+          <Link href="/collections">Подборки</Link>
           <Link href="/favorites">Избранное</Link>
         </nav>
 

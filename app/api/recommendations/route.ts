@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { games } from "@/db/schema";
+import { cardColumns } from "@/lib/game-columns";
 import { rankRecommendations, readRecommendationRequest, RecommendationError } from "@/lib/recommendations.mjs";
 
 export async function POST(request: Request) {
   try {
     const preferences = await readRecommendationRequest(request);
-    const catalog = await db.select().from(games);
+    const catalog = await db.select(cardColumns).from(games);
     return NextResponse.json(rankRecommendations(catalog, preferences), { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof RecommendationError) {

@@ -22,6 +22,31 @@ export function pluralize(count: number, one: string, few: string, many: string)
   return many;
 }
 
+type Priced = { isFree?: boolean | null; priceFinal?: number | null; priceInitial?: number | null;
+  discountPercent?: number | null; priceCurrency?: string | null };
+
+function money(minor: number, currency: string) {
+  return new Intl.NumberFormat("ru-RU", { style: "currency", currency, maximumFractionDigits: 0 }).format(minor / 100);
+}
+
+// Price label for cards and the game page; null when the store gave no price for the region.
+export function formatPrice(game: Priced) {
+  if (game.isFree) return { label: "Бесплатно", old: null, discount: null };
+  if (!game.priceFinal || !game.priceCurrency) return null;
+  const discount = game.discountPercent && game.discountPercent > 0 ? game.discountPercent : null;
+  return {
+    label: money(game.priceFinal, game.priceCurrency),
+    old: discount && game.priceInitial && game.priceInitial > game.priceFinal ? money(game.priceInitial, game.priceCurrency) : null,
+    discount,
+  };
+}
+
+// 1 234 567 → "1,2 млн", 45 300 → "45 тыс."
+export function formatCompact(count?: number | null) {
+  if (typeof count !== "number" || count <= 0) return null;
+  return new Intl.NumberFormat("ru-RU", { notation: "compact", maximumFractionDigits: 1 }).format(count);
+}
+
 export function formatCount(count: number) {
   return new Intl.NumberFormat("ru-RU").format(count);
 }

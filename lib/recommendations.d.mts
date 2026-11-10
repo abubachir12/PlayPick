@@ -1,6 +1,8 @@
 export type Mood = "relax" | "challenge" | "story" | "explore" | "social";
 export type GameLength = "short" | "medium" | "long";
 export const ALGORITHM: "rules-v2";
+/** Series name without numbers and subtitles: "Grand Theft Auto IV" → "grand theft auto". */
+export function seriesKey(title: string): string;
 export interface RecommendationPreferences {
   mood: Mood;
   platform: string | null;

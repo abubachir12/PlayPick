@@ -14,7 +14,15 @@ const sorts = [
   { value: "title", label: "По названию" },
   { value: "rating", label: "По рейтингу" },
   { value: "release-date", label: "Сначала новые" },
+  { value: "popular", label: "Сейчас играют" },
+  { value: "discount", label: "По размеру скидки" },
+  { value: "price", label: "Сначала дешёвые" },
 ];
+const flags = [
+  { name: "deal", label: "Со скидкой" },
+  { name: "free", label: "Бесплатные" },
+  { name: "russian", label: "С русским языком" },
+] as const;
 
 type Filters = { genres: string[]; platforms: string[] };
 type CatalogPage = { games: Game[]; total: number; totalPages: number };
@@ -22,35 +30,44 @@ type CatalogPage = { games: Game[]; total: number; totalPages: number };
 const SORTS = new Set(sorts.map((option) => option.value));
 
 // A hand-edited URL must not turn into an API error: invalid page and sort values fall back to defaults.
-function readParams(params: URLSearchParams) {
+function readParams(params: URLSearchParams, defaultSort: string) {
   const rawPage = params.get("page") ?? "";
   const rawSort = params.get("sort") ?? "";
   return {
     search: params.get("search")?.trim() ?? "",
     genre: params.get("genre")?.trim() ?? "",
     platform: params.get("platform")?.trim() ?? "",
-    sort: SORTS.has(rawSort) ? rawSort : "title",
+    sort: SORTS.has(rawSort) ? rawSort : defaultSort,
+    deal: params.get("deal") === "1",
+    free: params.get("free") === "1",
+    russian: params.get("russian") === "1",
     page: /^[1-9]\d{0,5}$/.test(rawPage) ? Number(rawPage) : 1,
   };
 }
 
-function apiQuery({ search, genre, platform, sort, page }: ReturnType<typeof readParams>) {
+function apiQuery({ search, genre, platform, sort, page, deal, free, russian }: ReturnType<typeof readParams>, collection?: string) {
   const query = new URLSearchParams();
   if (search) query.set("search", search.slice(0, 200));
   if (genre) query.set("genre", genre.slice(0, 200));
   if (platform) query.set("platform", platform.slice(0, 200));
-  if (sort !== "title") query.set("sort", sort);
+  // Inside a collection the sort is always explicit: without it the API applies the collection's own order.
+  if (sort !== "title" || collection) query.set("sort", sort);
+  if (collection) query.set("collection", collection);
+  if (deal) query.set("deal", "1");
+  if (free) query.set("free", "1");
+  if (russian) query.set("russian", "1");
   if (page > 1) query.set("page", String(page));
   query.set("limit", String(PAGE_SIZE));
   return query.toString();
 }
 
-export default function CatalogView() {
+// collection: show one ready-made collection (its rule is applied by the API) with the same filters on top.
+export default function CatalogView({ collection, defaultSort = "title" }: { collection?: string; defaultSort?: string }) {
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const current = readParams(params);
-  const queryKey = apiQuery(current);
+  const current = readParams(params, defaultSort);
+  const queryKey = apiQuery(current, collection);
   const { search, genre, platform, sort, page } = current;
 
   const [searchDraft, setSearchDraft] = useState(search);
@@ -91,17 +108,18 @@ export default function CatalogView() {
   const update = useCallback((changes: Record<string, string>, resetPage = true) => {
     const next = new URLSearchParams(params.toString());
     for (const [name, value] of Object.entries(changes)) {
-      if (value && !(name === "sort" && value === "title")) next.set(name, value);
+      if (value && !(name === "sort" && value === defaultSort)) next.set(name, value);
       else next.delete(name);
     }
     if (resetPage) next.delete("page");
     const query = next.toString();
     router.push(query ? `${pathname}?${query}` : pathname, { scroll: !resetPage });
-  }, [params, pathname, router]);
+  }, [params, pathname, router, defaultSort]);
 
   const loading = !result || result.key !== queryKey;
   const data = !loading ? result.data : undefined;
-  const hasFilters = Boolean(search || genre || platform);
+  const hasFilters = Boolean(search || genre || platform || current.deal || current.free || current.russian);
+  const reset = { search: "", genre: "", platform: "", deal: "", free: "", russian: "" };
 
   return (
     <>
@@ -175,6 +193,20 @@ export default function CatalogView() {
         </div>
       )}
 
+      <div className="genre-strip flag-strip" aria-label="Дополнительные фильтры">
+        {flags.map(({ name, label }) => (
+          <button
+            key={name}
+            type="button"
+            className={`chip chip-toggle ${current[name] ? "is-selected" : ""}`}
+            aria-pressed={current[name]}
+            onClick={() => update({ [name]: current[name] ? "" : "1" })}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       {data && (
         <p className="results-count" aria-live="polite">
           {data.total
@@ -183,7 +215,7 @@ export default function CatalogView() {
           {data.total > 0 && hasFilters && (
             <button type="button" className="text-link reset-link" onClick={() => {
               setSearchDraft("");
-              update({ search: "", genre: "", platform: "" });
+              update(reset);
             }}>
               Сбросить фильтры
             </button>
@@ -207,18 +239,19 @@ export default function CatalogView() {
       )}
 
       {data && data.total === 0 && (
-        <EmptyState title={hasFilters ? "Ничего не нашлось" : "Каталог пока пуст"}>
+        <EmptyState title={hasFilters || collection ? "Ничего не нашлось" : "Каталог пока пуст"}>
           {/[а-яё]/i.test(search) && (
-            <p>Названия игр в каталоге на английском — попробуй, например, «Witcher» вместо «Ведьмак».</p>
+            <p>Названия в каталоге английские. Популярные русские названия мы понимаем («ведьмак», «сталкер»), для остальных попробуй оригинальное.</p>
           )}
+          {!hasFilters && collection && <p>Сегодня в этой подборке пусто — загляни позже.</p>}
           {hasFilters ? (
             <button type="button" className="secondary-button small" onClick={() => {
               setSearchDraft("");
-              update({ search: "", genre: "", platform: "" });
+              update(reset);
             }}>
               Сбросить фильтры
             </button>
-          ) : (
+          ) : !collection && (
             <p>Игры ещё не загружены. Загляни чуть позже.</p>
           )}
         </EmptyState>

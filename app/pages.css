@@ -2305,6 +2305,30 @@ img.game-cover {
   }
 }
 
+/* Just above the phone breakpoint five links no longer fit: logo and login shrink to icons, search narrows */
+@media (max-width: 780px) and (min-width: 641px) {
+  .desktop-nav,
+  .header-inner {
+    gap: 10px;
+  }
+
+  .header-logo span:last-child,
+  .header-login span {
+    display: none;
+  }
+
+  .header-login {
+    width: 34px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .search-box .search,
+  .search-box:focus-within .search {
+    width: 104px;
+  }
+}
+
 /* globals.css hides the header search on small phones; the menu copy must stay visible */
 .mobile-nav .mobile-search.search-wrapper {
   display: flex;
@@ -2834,5 +2858,545 @@ img.game-cover {
   /* The toast fades out through its animation; without motion it simply stays until removed */
   .toast {
     animation: none !important;
+  }
+}
+
+/* =========================
+   STOREFRONT: PRICES, ONLINE, MEDIA, COLLECTIONS
+========================= */
+
+:root {
+  --green: #4ade80;
+}
+
+/* Home: ask the consultant right from the first screen */
+.hero-ask {
+  width: 100%;
+  max-width: 640px;
+  margin-top: 28px;
+  padding: 6px 6px 6px 18px;
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
+  background: rgba(7, 11, 18, 0.62);
+  backdrop-filter: blur(14px);
+  color: var(--purple-soft);
+
+  animation: fadeUp 0.8s var(--ease-out) 0.2s both;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.hero-ask:focus-within {
+  border-color: rgba(139, 92, 246, 0.8);
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.18);
+}
+
+.hero-ask svg {
+  flex-shrink: 0;
+}
+
+.hero-ask input {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+
+  border: none;
+  outline: none;
+  background: transparent;
+  color: white;
+  font: inherit;
+  font-size: 15px;
+  text-overflow: ellipsis;
+}
+
+.hero-ask input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.hero-ask button {
+  flex-shrink: 0;
+  height: 44px;
+  padding: 0 18px;
+
+  border: none;
+  border-radius: 12px;
+  background: var(--purple);
+  color: white;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.hero-ask button:hover {
+  background: #9b6cff;
+  transform: translateY(-1px);
+}
+
+.hero .hero-buttons {
+  margin-top: 18px;
+}
+
+.hero .hero-buttons a {
+  min-height: 46px;
+  padding: 0 20px;
+  font-size: 14px;
+}
+
+/* Home: how it works */
+.steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  counter-reset: step;
+}
+
+.steps li {
+  position: relative;
+  padding: 24px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  counter-increment: step;
+  transition: border-color 0.3s ease, transform 0.35s var(--ease-out);
+}
+
+.steps li:hover {
+  border-color: rgba(139, 92, 246, 0.55);
+  transform: translateY(-4px);
+}
+
+.steps li::after {
+  content: "0" counter(step);
+  position: absolute;
+  top: 18px;
+  right: 22px;
+  color: rgba(255, 255, 255, 0.09);
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.step-icon {
+  width: 44px;
+  height: 44px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 13px;
+  background: rgba(139, 92, 246, 0.16);
+  color: var(--purple-soft);
+}
+
+.steps strong {
+  font-size: 17px;
+}
+
+.steps p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.steps .text-link {
+  margin-top: auto;
+}
+
+/* Cards: price, discount, players online */
+.game-card-discount {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: var(--green);
+  color: #052e13;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.game-card-price {
+  margin: 2px 0 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.game-card-price s {
+  color: var(--text-faint);
+  font-weight: 400;
+}
+
+.game-card-price .is-free {
+  color: var(--green);
+}
+
+.card-online {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 13px;
+}
+
+.card-online span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.6);
+  animation: onlinePulse 2s ease-out infinite;
+}
+
+@keyframes onlinePulse {
+  to { box-shadow: 0 0 0 7px rgba(74, 222, 128, 0); }
+}
+
+/* Collections */
+.collection-tile {
+  min-height: 170px;
+}
+
+.collection-tile.is-large {
+  min-height: 220px;
+}
+
+.collection-count {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(7, 11, 18, 0.6);
+  backdrop-filter: blur(8px);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.collection-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.collection-bar {
+  justify-content: space-between;
+  margin: 20px 0;
+}
+
+.flag-strip {
+  margin-top: 10px;
+}
+
+/* Game page: price */
+.price-block {
+  padding: 20px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(139, 92, 246, 0.2), transparent 60%),
+    var(--surface);
+}
+
+.price-line {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.price-line strong {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.price-line s {
+  color: var(--text-faint);
+  font-size: 15px;
+}
+
+.price-discount {
+  padding: 5px 9px;
+  border-radius: 9px;
+  background: var(--green);
+  color: #052e13;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.price-block .hint {
+  margin: 0;
+}
+
+.price-block a {
+  gap: 6px;
+}
+
+/* Game page: trailer and screenshots */
+.media-block {
+  align-items: stretch;
+}
+
+.trailer-poster,
+.trailer-video {
+  position: relative;
+  width: 100%;
+  max-width: 760px;
+  aspect-ratio: 16 / 9;
+
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  background: #000;
+}
+
+.trailer-poster {
+  padding: 0;
+  cursor: pointer;
+  color: white;
+}
+
+.trailer-poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.8;
+  transition: transform 0.6s var(--ease-out), opacity 0.3s ease;
+}
+
+.trailer-poster:hover img {
+  transform: scale(1.04);
+  opacity: 1;
+}
+
+.trailer-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+
+  width: 68px;
+  height: 68px;
+  padding-left: 4px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+  background: var(--purple);
+  box-shadow: 0 10px 40px rgba(139, 92, 246, 0.55);
+  transition: scale 0.3s var(--ease-out);
+}
+
+.trailer-poster:hover .trailer-play {
+  scale: 1.1;
+}
+
+.trailer-name {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 28px 16px 12px;
+
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+  font-size: 13px;
+  text-align: left;
+}
+
+.shot-grid {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-width: 760px;
+
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.shot-grid button {
+  width: 100%;
+  padding: 0;
+  display: block;
+  aspect-ratio: 16 / 9;
+
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface);
+  cursor: zoom-in;
+  transition: border-color 0.25s ease, transform 0.3s var(--ease-out);
+}
+
+.shot-grid button:hover {
+  border-color: rgba(139, 92, 246, 0.7);
+  transform: translateY(-2px);
+}
+
+.shot-grid img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  padding: 24px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(3, 5, 10, 0.92);
+  backdrop-filter: blur(6px);
+  cursor: zoom-out;
+  animation: lightboxIn 0.2s ease both;
+}
+
+@keyframes lightboxIn {
+  from { opacity: 0; }
+}
+
+.lightbox img {
+  max-width: min(100%, 1600px);
+  max-height: 100%;
+  border-radius: 12px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  cursor: default;
+}
+
+.lightbox-close,
+.lightbox-nav {
+  position: absolute;
+  width: 46px;
+  height: 46px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  background: rgba(7, 11, 18, 0.7);
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.lightbox-close:hover,
+.lightbox-nav:hover {
+  background: var(--purple);
+}
+
+.lightbox-close { top: 20px; right: 20px; }
+.lightbox-nav.prev { left: 20px; top: 50%; translate: 0 -50%; }
+.lightbox-nav.next { right: 20px; top: 50%; translate: 0 -50%; }
+
+.lightbox-count {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  translate: -50% 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+}
+
+.requirements {
+  max-width: 760px;
+  margin: 0;
+  padding: 16px 18px;
+
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 14px;
+  line-height: 1.7;
+  white-space: pre-line;
+}
+
+@media (max-width: 900px) {
+  .steps,
+  .collection-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .shot-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 641px) and (max-width: 900px) {
+  .collection-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .hero-ask {
+    padding-left: 14px;
+    gap: 8px;
+  }
+
+  .hero-ask svg {
+    display: none;
+  }
+
+  .hero-ask button {
+    padding: 0 14px;
+  }
+
+  .shot-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lightbox {
+    padding: 8px;
+  }
+
+  .lightbox-nav.prev { left: 8px; }
+  .lightbox-nav.next { right: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-online span {
+    animation: none;
   }
 }

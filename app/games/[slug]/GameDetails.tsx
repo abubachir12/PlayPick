@@ -5,7 +5,8 @@ import Link from "next/link";
 import { ArrowLeft, ExternalLink, Star } from "lucide-react";
 import type { Game } from "@/types/game";
 import { ApiError, errorMessage, requestJson } from "@/lib/api-client";
-import { formatRating, formatReleaseDate, releaseYear } from "@/lib/format";
+import { formatCompact, formatPrice, formatRating, formatReleaseDate, releaseYear } from "@/lib/format";
+import GameMedia from "./GameMedia";
 import GameCard from "../../components/GameCard";
 import GameCover from "../../components/GameCover";
 import { FavoriteButton, PlayedButton } from "../../components/LibraryButtons";
@@ -61,8 +62,9 @@ function Stats({ game }: { game: Game }) {
     { label: "Metacritic", value: game.metacritic ? String(game.metacritic) : null, suffix: "/ 100" },
     // RAWG playtime is an average across players, not a guaranteed completion time.
     { label: "В среднем играют", value: game.playtime ? String(game.playtime) : null, suffix: "ч" },
+    { label: "Сейчас играют в Steam", value: formatCompact(game.playersNow), suffix: "" },
     { label: "Год выхода", value: releaseYear(game.releaseDate), suffix: "" },
-  ].filter((stat) => stat.value);
+  ].filter((stat) => stat.value).slice(0, 4);
 
   if (!stats.length) return null;
   return (
@@ -74,6 +76,41 @@ function Stats({ game }: { game: Game }) {
         </div>
       ))}
     </dl>
+  );
+}
+
+function PriceBlock({ game }: { game: Game }) {
+  if (!game.steamId) return null;
+  const price = formatPrice(game);
+  const store = `https://store.steampowered.com/app/${game.steamId}/`;
+  const updated = game.marketUpdatedAt
+    ? new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long" }).format(new Date(game.marketUpdatedAt)) : null;
+
+  return (
+    <div className="price-block">
+      {price ? (
+        <>
+          <p className="price-line">
+            {price.discount && <span className="price-discount">−{price.discount}%</span>}
+            <strong>{price.label}</strong>
+            {price.old && <s>{price.old}</s>}
+          </p>
+          <a href={store} target="_blank" rel="noopener noreferrer" className="primary-button small">
+            {game.isFree ? "Играть в Steam" : "Купить в Steam"} <ExternalLink size={14} />
+          </a>
+          <p className="hint">
+            {game.isFree ? "Игра бесплатная." : "Цена в российском Steam."}{updated && ` Обновлено ${updated}.`}
+          </p>
+        </>
+      ) : (
+        <>
+          <p className="hint">В российском Steam игра сейчас не продаётся.</p>
+          <a href={store} target="_blank" rel="noopener noreferrer" className="secondary-button small">
+            Страница в Steam <ExternalLink size={14} />
+          </a>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -128,6 +165,7 @@ function Facts({ game }: { game: Game }) {
     ["Разработчик", game.developer],
     ["Издатель", game.publisher],
     ["Платформы", game.platforms?.join(", ")],
+    ["Русский язык", game.hasRussian == null ? null : game.hasRussian ? "Есть" : "Нет"],
   ].filter((fact): fact is [string, string] => Boolean(fact[1]));
 
   if (!facts.length) return null;
@@ -229,6 +267,15 @@ export default function GameDetails({ params }: { params: Promise<{ slug: string
             <p className="game-description muted">Описания пока нет.</p>
           )}
 
+          <GameMedia game={game} />
+
+          {game.requirements && (
+            <div className="detail-block">
+              <h2>Минимальные системные требования</h2>
+              <p className="requirements">{game.requirements}</p>
+            </div>
+          )}
+
           {game.tags && game.tags.length > 0 && (
             <div className="detail-block">
               <h2>Теги</h2>
@@ -240,6 +287,7 @@ export default function GameDetails({ params }: { params: Promise<{ slug: string
         </div>
 
         <aside className="game-body-side">
+          <PriceBlock game={game} />
           {game.genres && game.genres.length > 0 && (
             <div className="detail-block">
               <h2>Жанры</h2>

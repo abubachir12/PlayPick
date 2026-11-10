@@ -1,0 +1,5 @@
+{
+  "crons": [
+    { "path": "/api/cron/refresh-market", "schedule": "0 4 * * *" }
+  ]
+}

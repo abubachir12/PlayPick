@@ -9,6 +9,7 @@ import { chatCompletion, llmConfigured } from "@/lib/llm";
 import { escapeLike } from "@/lib/catalog-query.mjs";
 import { parseRecommendationPreferences, rankRecommendations } from "@/lib/recommendations.mjs";
 import { isSameOrigin } from "@/lib/auth.mjs";
+import { cardColumns } from "@/lib/game-columns";
 
 const noStore = { "Cache-Control": "no-store" };
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: noStore });
@@ -38,7 +39,7 @@ export async function POST(request: Request) {
     if (rateLimited(request)) throw new ConsultantError("Слишком много вопросов подряд — подождите минуту", 429);
     const { messages, likedIds } = parseChatRequest(await readJsonBody(request, 24_000));
 
-    const catalog = await db.select().from(games);
+    const catalog = await db.select(cardColumns).from(games);
     const genres = [...new Set(catalog.flatMap((game) => game.genres ?? []))].sort();
     const platforms = [...new Set(catalog.flatMap((game) => game.platforms ?? []))].sort();
 

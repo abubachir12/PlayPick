@@ -13,7 +13,8 @@ const links = [
   { href: "/games", label: "Игры" },
   { href: "/pick", label: "Подбор" },
   { href: "/consultant", label: "Консультант" },
-  { href: "/favorites", label: "Избранное" },
+  // Favorites keep their own heart button in the header, so the fifth link goes to collections.
+  { href: "/collections", label: "Подборки" },
 ];
 
 function isActive(pathname: string, href: string) {

@@ -81,6 +81,19 @@ export default function ConsultantChat() {
     }
   }
 
+  // A question typed on the home page arrives as ?q=…: ask it once the consultant is known to be on.
+  const asked = useRef(false);
+  useEffect(() => {
+    if (!enabled || asked.current) return;
+    asked.current = true;
+    const question = new URLSearchParams(window.location.search).get("q")?.trim().slice(0, 1500);
+    if (!question) return;
+    // Drop the parameter so a reload or a shared link does not ask again.
+    window.history.replaceState(null, "", window.location.pathname);
+    queueMicrotask(() => void send(question));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled]);
+
   if (enabled === false) {
     return (
       <div className="state-box">
