@@ -35,13 +35,15 @@ export const games = pgTable("games", {
   metacritic: integer("metacritic"),
   playtime: integer("playtime"),
 
-  // Steam storefront data (Russian region), refreshed daily; null when the game is not on Steam.
-  // Prices are in minor units (kopecks); priceFinal is null when the game is not sold in the region.
+  // Steam storefront data, refreshed daily; null when the game is not on Steam.
+  // price_* columns hold the main region (US, in cents) and drive sorting and discounts;
+  // prices holds the other regions (lib/regions.mjs) as { kz: { final, initial, discount, currency } | null, … }.
   isFree: boolean("is_free"),
   priceFinal: integer("price_final"),
   priceInitial: integer("price_initial"),
   discountPercent: integer("discount_percent"),
   priceCurrency: text("price_currency"),
+  prices: jsonb("prices").$type<Record<string, { final: number; initial: number; discount: number; currency: string } | null>>(),
   // Concurrent players from SteamSpy.
   playersNow: integer("players_now"),
   screenshots: jsonb("screenshots").$type<string[]>(),

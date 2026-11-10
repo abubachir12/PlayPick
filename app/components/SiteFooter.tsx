@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { RegionSelect } from "./PriceTag";
 
 const moods = [
   { id: "relax", label: "Расслабиться" },
@@ -18,6 +19,7 @@ export default function SiteFooter() {
             <span>PlayPick</span>
           </Link>
           <p>Подбор игр под настроение, свободное время и любимые жанры.</p>
+          <RegionSelect align="left" />
         </div>
 
         <nav className="site-footer-column" aria-label="Разделы">

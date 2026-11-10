@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Heart, Menu, UserRound, X } from "lucide-react";
 import { useLibrary } from "@/lib/use-library";
 import { useSession } from "@/lib/use-session";
+import { RegionSelect } from "./PriceTag";
 import SearchBox from "./SearchBox";
 
 const links = [
@@ -80,6 +81,8 @@ export default function SiteHeader() {
         <div className="profile-bar">
           <SearchBox autoFocusShortcut />
 
+          <RegionSelect compact />
+
           <Link
             href="/favorites"
             className="header-icon-link"
@@ -119,6 +122,7 @@ export default function SiteHeader() {
           <Link href={session.user ? "/account" : "/login"} onClick={closeMenu}>
             {session.user ? `Аккаунт · ${session.user.name}` : "Войти"}
           </Link>
+          <RegionSelect align="left" />
         </nav>
       )}
     </header>

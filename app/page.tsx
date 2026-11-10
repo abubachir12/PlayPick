@@ -407,7 +407,7 @@ export default function Home() {
 
       {dealGames && dealGames.length >= 4 && (
         <section className="page-section reveal">
-          <SectionHeading title="Сейчас со скидкой" text="Цены российского Steam, обновляются раз в день." href="/collections/deals" />
+          <SectionHeading title="Сейчас со скидкой" text="Скидки в Steam, обновляются раз в день. Регион цен выбирается в шапке сайта." href="/collections/deals" />
           <div className="game-grid">
             {dealGames.slice(0, 8).map((game) => <GameCard key={game.id} game={game} />)}
           </div>

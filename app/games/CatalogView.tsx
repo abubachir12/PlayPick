@@ -6,7 +6,9 @@ import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import type { Game } from "@/types/game";
 import { errorMessage, requestJson } from "@/lib/api-client";
 import { formatCount, pluralize } from "@/lib/format";
+import Dropdown from "../components/Dropdown";
 import GameCard from "../components/GameCard";
+import { RegionSelect } from "../components/PriceTag";
 import { EmptyState, ErrorState, GridSkeleton } from "../components/States";
 
 const PAGE_SIZE = 20;
@@ -143,28 +145,27 @@ export default function CatalogView({ collection, defaultSort = "title" }: { col
           />
         </label>
 
-        <label className="field">
-          <span className="visually-hidden">Жанр</span>
-          <select value={genre} onChange={(event) => update({ genre: event.target.value })}>
-            <option value="">Все жанры</option>
-            {filters?.genres.map((name) => <option key={name} value={name}>{name}</option>)}
-          </select>
-        </label>
+        <div className="field">
+          <Dropdown
+            label="Жанр"
+            value={genre}
+            onChange={(value) => update({ genre: value })}
+            options={[{ value: "", label: "Все жанры" }, ...(filters?.genres ?? []).map((name) => ({ value: name, label: name }))]}
+          />
+        </div>
 
-        <label className="field">
-          <span className="visually-hidden">Платформа</span>
-          <select value={platform} onChange={(event) => update({ platform: event.target.value })}>
-            <option value="">Все платформы</option>
-            {filters?.platforms.map((name) => <option key={name} value={name}>{name}</option>)}
-          </select>
-        </label>
+        <div className="field">
+          <Dropdown
+            label="Платформа"
+            value={platform}
+            onChange={(value) => update({ platform: value })}
+            options={[{ value: "", label: "Все платформы" }, ...(filters?.platforms ?? []).map((name) => ({ value: name, label: name }))]}
+          />
+        </div>
 
-        <label className="field">
-          <span className="visually-hidden">Сортировка</span>
-          <select value={sort} onChange={(event) => update({ sort: event.target.value })}>
-            {sorts.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </select>
-        </label>
+        <div className="field">
+          <Dropdown label="Сортировка" value={sort} onChange={(value) => update({ sort: value })} options={sorts} />
+        </div>
 
         <button type="submit" className="primary-button">Найти</button>
       </form>
@@ -205,6 +206,7 @@ export default function CatalogView({ collection, defaultSort = "title" }: { col
             {label}
           </button>
         ))}
+        <RegionSelect />
       </div>
 
       {data && (

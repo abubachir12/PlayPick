@@ -6,6 +6,9 @@ import { ArrowLeft, ExternalLink, Star } from "lucide-react";
 import type { Game } from "@/types/game";
 import { ApiError, errorMessage, requestJson } from "@/lib/api-client";
 import { formatCompact, formatPrice, formatRating, formatReleaseDate, releaseYear } from "@/lib/format";
+import { REGIONS } from "@/lib/regions.mjs";
+import { useRegion } from "@/lib/use-region";
+import { RegionSelect } from "../../components/PriceTag";
 import GameMedia from "./GameMedia";
 import GameCard from "../../components/GameCard";
 import GameCover from "../../components/GameCover";
@@ -80,40 +83,58 @@ function Stats({ game }: { game: Game }) {
 }
 
 function PriceBlock({ game }: { game: Game }) {
+  const region = useRegion();
   if (!game.steamId) return null;
-  const price = formatPrice(game);
+  const price = formatPrice(game, region);
   const store = `https://store.steampowered.com/app/${game.steamId}/`;
+  const current = REGIONS.find((item) => item.id === region) ?? REGIONS[0];
   const updated = game.marketUpdatedAt
     ? new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long" }).format(new Date(game.marketUpdatedAt)) : null;
+  // Every tracked region side by side: the cheapest place to buy is visible at a glance.
+  const rows = game.isFree ? [] : REGIONS.map((item) => ({ ...item, price: formatPrice(game, item.id) }));
 
   return (
     <div className="price-block">
+      <div className="price-head">
+        <h2>Цена в Steam</h2>
+        <RegionSelect />
+      </div>
       {price ? (
-        <>
-          <p className="price-line">
-            {price.discount && <span className="price-discount">−{price.discount}%</span>}
-            <strong>{price.label}</strong>
-            {price.old && <s>{price.old}</s>}
-          </p>
-          <a href={store} target="_blank" rel="noopener noreferrer" className="primary-button small">
-            {game.isFree ? "Играть в Steam" : "Купить в Steam"} <ExternalLink size={14} />
-          </a>
-          <p className="hint">
-            {game.isFree ? "Игра бесплатная." : "Цена в российском Steam."}{updated && ` Обновлено ${updated}.`}
-          </p>
-        </>
+        <p className="price-line">
+          {price.discount && <span className="price-discount">−{price.discount}%</span>}
+          <strong>{price.label}</strong>
+          {price.old && <s>{price.old}</s>}
+        </p>
       ) : (
-        <>
-          <p className="hint">В российском Steam игра сейчас не продаётся.</p>
-          <a href={store} target="_blank" rel="noopener noreferrer" className="secondary-button small">
-            Страница в Steam <ExternalLink size={14} />
-          </a>
-        </>
+        <p className="price-missing">В регионе «{current.label}» игра не продаётся.</p>
       )}
+      <a href={store} target="_blank" rel="noopener noreferrer" className={`${price ? "primary-button" : "secondary-button"} small`}>
+        {game.isFree ? "Играть в Steam" : price ? "Купить в Steam" : "Страница в Steam"} <ExternalLink size={14} />
+      </a>
+      {rows.some((row) => row.price) && (
+        <table className="price-table">
+          <caption className="visually-hidden">Цены в других регионах</caption>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.id} className={row.id === region ? "is-current" : undefined}>
+                <th scope="row">{row.label}</th>
+                <td>
+                  {row.price ? (
+                    <>
+                      {row.price.discount && <span className="price-table-discount">−{row.price.discount}%</span>}
+                      {row.price.label}
+                    </>
+                  ) : <span className="price-table-none">не продаётся</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {updated && <p className="hint">Цены Steam, обновлено {updated}.</p>}
     </div>
   );
 }
-
 function ExternalLinks({ game }: { game: Game }) {
   const query = encodeURIComponent(game.title);
   const links = [
@@ -142,8 +163,10 @@ function ExternalLinks({ game }: { game: Game }) {
   );
 }
 
-function Description({ text }: { text: string }) {
+function Description({ text: raw }: { text: string }) {
   const [expanded, setExpanded] = useState(false);
+  // Older catalog texts carry leftover heading marks ("###Setting"); the page shows plain paragraphs.
+  const text = raw.replace(/^\s*#{1,6}\s*/gm, "");
   const long = text.length > 700;
   return (
     <div className="detail-block">

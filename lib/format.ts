@@ -1,3 +1,5 @@
+import { MAIN_REGION, regionPrice, type RegionPrice } from "@/lib/regions.mjs";
+
 export function releaseYear(date?: string | null) {
   return date && /^\d{4}/.test(date) ? date.slice(0, 4) : null;
 }
@@ -22,21 +24,30 @@ export function pluralize(count: number, one: string, few: string, many: string)
   return many;
 }
 
-type Priced = { isFree?: boolean | null; priceFinal?: number | null; priceInitial?: number | null;
-  discountPercent?: number | null; priceCurrency?: string | null };
+export type Priced = { isFree?: boolean | null; priceFinal?: number | null; priceInitial?: number | null;
+  discountPercent?: number | null; priceCurrency?: string | null; prices?: Record<string, RegionPrice | null> | null };
 
-function money(minor: number, currency: string) {
-  return new Intl.NumberFormat("ru-RU", { style: "currency", currency, maximumFractionDigits: 0 }).format(minor / 100);
+export const CURRENCY_SYMBOLS: Record<string, string> = { USD: "$", KZT: "₸", RUB: "₽", UAH: "₴", EUR: "€" };
+
+// "$14.99" for dollars; tenge, roubles and hryvnias are shown whole with their sign, as the store does.
+export function formatMoney(minor: number, currency: string) {
+  const symbol = CURRENCY_SYMBOLS[currency] ?? currency;
+  if (currency === "USD" || currency === "EUR") {
+    const amount = minor % 100 === 0 ? String(minor / 100) : (minor / 100).toFixed(2);
+    return `${symbol}${amount}`;
+  }
+  return `${new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(minor / 100)} ${symbol}`;
 }
 
-// Price label for cards and the game page; null when the store gave no price for the region.
-export function formatPrice(game: Priced) {
+// Price label for cards and the game page in the chosen region; null when the game is not sold there.
+export function formatPrice(game: Priced, region: string = MAIN_REGION) {
   if (game.isFree) return { label: "Бесплатно", old: null, discount: null };
-  if (!game.priceFinal || !game.priceCurrency) return null;
-  const discount = game.discountPercent && game.discountPercent > 0 ? game.discountPercent : null;
+  const price = regionPrice(game, region);
+  if (!price) return null;
+  const discount = price.discount > 0 ? price.discount : null;
   return {
-    label: money(game.priceFinal, game.priceCurrency),
-    old: discount && game.priceInitial && game.priceInitial > game.priceFinal ? money(game.priceInitial, game.priceCurrency) : null,
+    label: formatMoney(price.final, price.currency),
+    old: discount && price.initial > price.final ? formatMoney(price.initial, price.currency) : null,
     discount,
   };
 }

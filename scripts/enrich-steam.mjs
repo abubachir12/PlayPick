@@ -1,4 +1,4 @@
-// Fills storefront data for catalog games from Steam: price (RU region), players online, screenshots,
+// Fills storefront data for catalog games from Steam: prices (US main + KZ, RU, UA, BY), players online, screenshots,
 // trailer, system requirements, Russian language flag and a Russian description.
 // RAWG games are linked to Steam by normalized title first, so they get the same data.
 // Usage: node scripts/enrich-steam.mjs            collect into data/steam-enrich.json (resumable, DB read-only)
@@ -8,6 +8,7 @@ import { resolve } from "node:path";
 import dotenv from "dotenv";
 import { neon } from "@neondatabase/serverless";
 import { createSteamClient, extractStorefront, SteamError, titleKey } from "../lib/steam.mjs";
+import { collectRegionPrices } from "../lib/market.mjs";
 
 const FILE = resolve("data/steam-enrich.json");
 const apply = process.argv.includes("--apply");
@@ -25,18 +26,25 @@ try {
   if (apply) {
     const rows = Object.values(cache).filter((row) => !row.skipped);
     if (!rows.length) throw new SteamError("Нет собранных данных: сначала запустите без --apply");
+    // Prices are taken fresh for every tracked region (US is the main one), whatever region the pages were read in.
+    const prices = await collectRegionPrices(createSteamClient(), rows.map((row) => row.steamId));
+    for (const row of rows) {
+      const price = prices.get(row.steamId);
+      Object.assign(row, price ?? { priceFinal: null, priceInitial: null, discountPercent: null, priceCurrency: null, prices: {} });
+    }
+    console.log(`Цены получены для ${prices.size} игр из ${rows.length}`);
     // One statement: all rows are updated or none. steam_id is only filled in, never replaced.
     const result = await sql.query(`
       UPDATE games AS g SET
         steam_id = COALESCE(g.steam_id, s."steamId"),
         is_free = s."isFree", price_final = s."priceFinal", price_initial = s."priceInitial",
-        discount_percent = s."discountPercent", price_currency = s."priceCurrency",
+        discount_percent = s."discountPercent", price_currency = s."priceCurrency", prices = s.prices,
         players_now = s."playersNow", screenshots = s.screenshots, trailer = s.trailer,
         requirements = s.requirements, has_russian = s."hasRussian",
         description = COALESCE(s.description, g.description),
         market_updated_at = now(), updated_at = now()
       FROM jsonb_to_recordset($1::jsonb) AS s(id integer, "steamId" integer, "isFree" boolean, "priceFinal" integer,
-        "priceInitial" integer, "discountPercent" integer, "priceCurrency" text, "playersNow" integer,
+        "priceInitial" integer, "discountPercent" integer, "priceCurrency" text, prices jsonb, "playersNow" integer,
         screenshots jsonb, trailer jsonb, requirements text, "hasRussian" boolean, description text)
       WHERE g.id = s.id
         AND NOT EXISTS (SELECT 1 FROM games other WHERE other.steam_id = s."steamId" AND other.id <> g.id)

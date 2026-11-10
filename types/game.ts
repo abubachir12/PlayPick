@@ -21,8 +21,10 @@ export interface Game {
   steamId?: number | null;
 
   isFree?: boolean | null;
-  /** Minor units (kopecks) of priceCurrency; null when not sold in the region. */
+  /** Main region (US) price in minor units of priceCurrency; null when not sold there. */
   priceFinal?: number | null;
+  /** Other regions by ID (kz, ru, ua, by); null inside when the game is not sold in that region. */
+  prices?: Record<string, { final: number; initial: number; discount: number; currency: string } | null> | null;
   priceInitial?: number | null;
   discountPercent?: number | null;
   priceCurrency?: string | null;

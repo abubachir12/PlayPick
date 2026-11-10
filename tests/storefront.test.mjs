@@ -23,17 +23,17 @@ test("collections are plain rules over catalog fields", () => {
   assert.equal(new Set(COLLECTION_IDS).size, COLLECTIONS.length);
   assert.equal(findCollection("nope"), null);
   const game = { tags: ["Co-op", "Horror"], rating: 4.2, playtime: 5, releaseDate: "2010-05-01",
-    isFree: false, priceFinal: 29900, discountPercent: 50, playersNow: 120 };
+    isFree: false, priceFinal: 499, discountPercent: 50, playersNow: 120 };
   const ids = COLLECTIONS.filter((collection) => matchesCollection(game, collection)).map((collection) => collection.id);
-  assert.deepEqual(ids, ["playing-now", "deals", "under-500", "coop", "one-evening", "horror", "classics"]);
+  assert.deepEqual(ids, ["playing-now", "deals", "under-10", "coop", "one-evening", "horror", "classics"]);
   assert.equal(matchesCollection({ ...game, tags: ["Open World"] }, findCollection("one-evening")), false);
   // A paid game with a stray "Free to Play" tag is not free once the store says so.
   assert.equal(matchesCollection({ tags: ["Free to Play"], isFree: false }, findCollection("free")), false);
   const free = { tags: ["Free to Play"], rating: 3, priceFinal: null };
   assert.deepEqual(COLLECTIONS.filter((collection) => matchesCollection(free, collection)).map((c) => c.id), ["free"]);
-  // Free and unpriced games are not "under 500": that list is about things you can buy cheaply.
-  assert.equal(matchesCollection({ ...game, priceFinal: 0 }, findCollection("under-500")), false);
-  assert.equal(matchesCollection({ ...game, priceFinal: 50100 }, findCollection("under-500")), false);
+  // Free and unpriced games are not "under $10": that list is about things you can buy cheaply.
+  assert.equal(matchesCollection({ ...game, priceFinal: 0 }, findCollection("under-10")), false);
+  assert.equal(matchesCollection({ ...game, priceFinal: 1001 }, findCollection("under-10")), false);
 });
 
 test("Russian names of well-known games also search their English titles", () => {
@@ -83,8 +83,44 @@ test("storefront details keep only Steam-hosted media and plain text", () => {
 test("the consultant is told real prices so it does not invent them", () => {
   const base = { id: 7, title: "Game", releaseDate: "2020-01-01", genres: ["RPG"], rating: 4.5, playtime: 10, description: "x" };
   const item = (game) => ({ game, reasons: [{ text: "Тег" }] });
-  assert.match(describeCandidate(item({ ...base, priceFinal: 29900, priceCurrency: "RUB", discountPercent: 50, hasRussian: true })),
-    /цена: 299 ₽ в Steam \(скидка 50%\); есть русский язык;/);
+  assert.match(describeCandidate(item({ ...base, priceFinal: 1499, priceCurrency: "USD", discountPercent: 50, hasRussian: true })),
+    /цена: \$14\.99 в Steam \(регион США\), скидка 50%; есть русский язык;/);
   assert.match(describeCandidate(item({ ...base, isFree: true })), /цена: бесплатная;/);
   assert.doesNotMatch(describeCandidate(item(base)), /цена/);
+});
+
+test("each region has its own price; the main region lives in the price columns", async () => {
+  const { regionPrice, compactPrice, REGION_IDS, MAIN_REGION } = await import("../lib/regions.mjs");
+  assert.equal(MAIN_REGION, "us");
+  assert.deepEqual(REGION_IDS, ["us", "kz", "ru", "ua", "by"]);
+  const game = { priceFinal: 1499, priceInitial: 2999, discountPercent: 50, priceCurrency: "USD",
+    prices: { kz: { final: 240000, initial: 240000, discount: 0, currency: "KZT" }, ru: null } };
+  assert.deepEqual(regionPrice(game, "us"), { final: 1499, initial: 2999, discount: 50, currency: "USD" });
+  assert.equal(regionPrice(game, "kz").final, 240000);
+  assert.equal(regionPrice(game, "ru"), null);   // answered: not sold there
+  assert.equal(regionPrice(game, "ua"), null);   // never fetched
+  assert.equal(regionPrice({ priceFinal: null }, "us"), null);
+  assert.equal(regionPrice(game, "mars").currency, "USD"); // unknown region falls back to the main one
+  assert.deepEqual(compactPrice({ priceFinal: 100, priceInitial: null, discountPercent: null, priceCurrency: "UAH" }),
+    { final: 100, initial: 100, discount: 0, currency: "UAH" });
+  assert.equal(compactPrice({ priceFinal: null, priceInitial: null, discountPercent: null, priceCurrency: null }), null);
+});
+
+test("regional prices are collected side by side; a failed region keeps its old value", async () => {
+  const { collectRegionPrices } = await import("../lib/market.mjs");
+  const answers = {
+    us: new Map([[1, { currency: "USD", initial: 2000, final: 1000, discount_percent: 50 }], [2, null]]),
+    kz: new Map([[1, { currency: "KZT", initial: 500000, final: 500000, discount_percent: 0 }]]),
+    ru: new Map([[1, null], [2, null]]),
+    by: new Map([[1, { currency: "USD", initial: 900, final: 900, discount_percent: 0 }]]),
+  };
+  const steam = { prices: async (ids, region) => { if (!answers[region]) throw new Error("down"); return answers[region]; } };
+  const result = await collectRegionPrices(steam, [1, 2, 3]);
+  assert.deepEqual([...result.keys()], [1, 2]);                      // 3 is unknown to the main region
+  assert.deepEqual(result.get(1), { priceFinal: 1000, priceInitial: 2000, discountPercent: 50, priceCurrency: "USD",
+    prices: { kz: { final: 500000, initial: 500000, discount: 0, currency: "KZT" }, ru: null,
+      by: { final: 900, initial: 900, discount: 0, currency: "USD" } } });   // ua failed → key absent
+  assert.equal(result.get(2).priceFinal, null);
+  assert.deepEqual(result.get(2).prices, { kz: null, ru: null, by: null });
+  await assert.rejects(collectRegionPrices({ prices: async () => { throw new Error("down"); } }, [1]));
 });

@@ -8,6 +8,7 @@ import type { RecommendationRequest, RecommendationResponse } from "@/types/reco
 import { errorMessage, requestJson } from "@/lib/api-client";
 import { readLibrary, useLibrary } from "@/lib/use-library";
 import { formatCount, pluralize } from "@/lib/format";
+import Dropdown from "../components/Dropdown";
 import GameCard from "../components/GameCard";
 import { PlayedButton } from "../components/LibraryButtons";
 import ShareButton from "../components/ShareButton";
@@ -214,32 +215,36 @@ export default function PickView() {
         </fieldset>
 
         <div className="pick-row">
-          <label className="field labeled">
+          <div className="field labeled">
             <span>Платформа</span>
-            <select value={platform} onChange={(event) => setPlatform(event.target.value)}>
-              <option value="">Любая</option>
-              {filters.platforms.map((name) => <option key={name} value={name}>{name}</option>)}
-            </select>
-          </label>
+            <Dropdown
+              label="Платформа"
+              value={platform}
+              onChange={setPlatform}
+              options={[{ value: "", label: "Любая" }, ...filters.platforms.map((name) => ({ value: name, label: name }))]}
+            />
+          </div>
 
-          <label className="field labeled">
+          <div className="field labeled">
             <span>Время на сессию</span>
-            <select
-              value={sessionMinutes ?? ""}
-              onChange={(event) => setSessionMinutes(event.target.value ? Number(event.target.value) : null)}
-            >
-              <option value="">Не важно</option>
-              {sessionChoices.map((minutes) => <option key={minutes} value={minutes}>{minutesLabel(minutes)}</option>)}
-            </select>
-          </label>
+            <Dropdown
+              label="Время на сессию"
+              value={sessionMinutes ? String(sessionMinutes) : ""}
+              onChange={(value) => setSessionMinutes(value ? Number(value) : null)}
+              options={[{ value: "", label: "Не важно" },
+                ...sessionChoices.map((minutes) => ({ value: String(minutes), label: minutesLabel(minutes) }))]}
+            />
+          </div>
 
-          <label className="field labeled">
+          <div className="field labeled">
             <span>Длина игры</span>
-            <select value={length} onChange={(event) => setLength(event.target.value as GameLength | "")}>
-              <option value="">Любая</option>
-              {lengthChoices.map((choice) => <option key={choice.id} value={choice.id}>{choice.label}</option>)}
-            </select>
-          </label>
+            <Dropdown
+              label="Длина игры"
+              value={length}
+              onChange={(value) => setLength(value as GameLength | "")}
+              options={[{ value: "", label: "Любая" }, ...lengthChoices.map((choice) => ({ value: choice.id, label: choice.label }))]}
+            />
+          </div>
         </div>
 
         {filters.genres.length > 0 && (

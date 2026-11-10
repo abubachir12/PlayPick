@@ -3400,3 +3400,366 @@ img.game-cover {
     animation: none;
   }
 }
+/* =========================
+   PRICE REGIONS
+========================= */
+
+.region-select {
+  position: relative;
+  display: inline-flex;
+}
+
+.region-button {
+  height: 36px;
+  padding: 0 10px 0 12px;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: rgba(255, 255, 255, 0.75);
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.region-button:hover,
+.region-select.is-open .region-button {
+  border-color: rgba(139, 92, 246, 0.65);
+  background: rgba(139, 92, 246, 0.12);
+  color: white;
+}
+
+.region-chevron {
+  opacity: 0.6;
+  transition: rotate 0.25s var(--ease-out);
+}
+
+.region-select.is-open .region-chevron {
+  rotate: 180deg;
+}
+
+/* Header pill: region code only */
+.region-select.is-compact {
+  flex-shrink: 0;
+}
+
+.region-select.is-compact .region-button {
+  width: auto;
+  height: 34px;
+  padding: 0 9px 0 11px;
+  gap: 6px;
+  border-radius: 999px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.region-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  z-index: 120;
+
+  min-width: 216px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  border-radius: 14px;
+  background: rgba(14, 19, 34, 0.97);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.03);
+
+  animation: regionMenuIn 0.18s var(--ease-out) both;
+}
+
+.region-menu.align-right { right: 0; }
+.region-menu.align-left { left: 0; }
+
+@keyframes regionMenuIn {
+  from { opacity: 0; translate: 0 -6px; }
+}
+
+/* .profile-bar button in globals.css makes header buttons round icons; menu rows are full-width rows */
+.region-menu button,
+.profile-bar .region-menu button {
+  width: 100%;
+  height: auto;
+  padding: 9px 10px;
+
+  display: grid;
+  grid-template-columns: 30px 1fr auto 16px;
+  align-items: center;
+  gap: 8px;
+
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  font: inherit;
+  font-size: 14px;
+  letter-spacing: 0;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.region-menu button:hover,
+.region-menu button:focus-visible {
+  outline: none;
+  background: rgba(139, 92, 246, 0.16);
+  color: white;
+}
+
+.region-menu button.is-selected {
+  background: rgba(139, 92, 246, 0.22);
+  color: white;
+}
+
+.region-code {
+  padding: 2px 0;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.region-menu button.is-selected .region-code {
+  background: var(--purple);
+  color: white;
+}
+
+.region-currency {
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.region-check {
+  color: var(--purple-soft);
+  opacity: 0;
+}
+
+.region-menu button.is-selected .region-check {
+  opacity: 1;
+}
+
+.mobile-nav .region-select {
+  margin-top: 8px;
+  align-self: flex-start;
+}
+
+.site-footer-about .region-select {
+  margin-top: 14px;
+}
+
+/* Footer: the list opens upwards so it is not cut off by the page end */
+.site-footer .region-menu {
+  top: auto;
+  bottom: calc(100% + 8px);
+}
+
+.flag-strip .region-select {
+  margin-left: auto;
+}
+.price-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.price-head h2 {
+  margin: 0;
+  color: var(--text-faint);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.price-missing {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 15px;
+}
+
+.price-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.price-table tr {
+  border-top: 1px solid var(--line);
+}
+
+.price-table th,
+.price-table td {
+  padding: 8px 0;
+  font-weight: 400;
+}
+
+.price-table th {
+  color: rgba(255, 255, 255, 0.6);
+  text-align: left;
+}
+
+.price-table td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.price-table tr.is-current th,
+.price-table tr.is-current td {
+  color: white;
+  font-weight: 600;
+}
+
+.price-table-discount {
+  margin-right: 8px;
+  color: var(--green);
+  font-weight: 700;
+}
+
+.price-table-none {
+  color: var(--text-faint);
+}
+
+@media (max-width: 1040px) {
+  .profile-bar .region-select {
+    display: none;
+  }
+}
+/* =========================
+   DROPDOWN (themed select)
+========================= */
+
+.dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.dropdown-button {
+  width: 100%;
+  height: 46px;
+  padding: 0 12px 0 14px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #0c111b;
+  color: white;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dropdown-button > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdown-button:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.dropdown-button:focus-visible,
+.dropdown.is-open .dropdown-button {
+  outline: none;
+  border-color: rgba(139, 92, 246, 0.8);
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.18);
+}
+
+.dropdown-chevron {
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.6);
+  transition: rotate 0.25s var(--ease-out);
+}
+
+.dropdown.is-open .dropdown-chevron {
+  rotate: 180deg;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 120;
+
+  min-width: 100%;
+  max-height: 320px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 92, 246, 0.5) transparent;
+
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  border-radius: 14px;
+  background: rgba(14, 19, 34, 0.98);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.03);
+
+  animation: regionMenuIn 0.18s var(--ease-out) both;
+}
+
+.dropdown-menu button {
+  width: 100%;
+  padding: 9px 10px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.dropdown-menu button:hover,
+.dropdown-menu button:focus-visible {
+  outline: none;
+  background: rgba(139, 92, 246, 0.16);
+  color: white;
+}
+
+.dropdown-menu button.is-selected {
+  background: rgba(139, 92, 246, 0.22);
+  color: white;
+}
+
+.dropdown-check {
+  flex-shrink: 0;
+  color: var(--purple-soft);
+  opacity: 0;
+}
+
+.dropdown-menu button.is-selected .dropdown-check {
+  opacity: 1;
+}
