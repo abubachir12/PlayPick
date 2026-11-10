@@ -1259,7 +1259,8 @@ img.game-cover {
   gap: 8px;
 
   margin-top: 14px;
-  padding-bottom: 6px;
+  /* Room between the chips and the scrollbar under them */
+  padding-bottom: 14px;
   overflow-x: auto;
 
   scrollbar-width: thin;
@@ -3109,8 +3110,13 @@ img.game-cover {
   margin: 20px 0;
 }
 
+/* Three switches always fit: no scrolling, so no scrollbar and no fading edge */
 .flag-strip {
-  margin-top: 10px;
+  margin-top: 4px;
+  padding-bottom: 0;
+  flex-wrap: wrap;
+  overflow: visible;
+  mask-image: none;
 }
 
 /* Game page: price */
@@ -3634,10 +3640,27 @@ img.game-cover {
   color: var(--text-faint);
 }
 
-@media (max-width: 1040px) {
+/* One region switch per screen: the header pill on desktop, the footer one on tablets,
+   the mobile menu one on phones. */
+.site-footer-about .region-select {
+  display: none;
+}
+
+@media (max-width: 900px) {
   .profile-bar .region-select {
     display: none;
   }
+}
+
+@media (min-width: 641px) and (max-width: 900px) {
+  .site-footer-about .region-select {
+    display: inline-flex;
+  }
+}
+
+.price-head > span {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
 }
 /* =========================
    DROPDOWN (themed select)

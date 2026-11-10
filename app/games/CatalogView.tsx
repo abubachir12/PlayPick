@@ -8,7 +8,6 @@ import { errorMessage, requestJson } from "@/lib/api-client";
 import { formatCount, pluralize } from "@/lib/format";
 import Dropdown from "../components/Dropdown";
 import GameCard from "../components/GameCard";
-import { RegionSelect } from "../components/PriceTag";
 import { EmptyState, ErrorState, GridSkeleton } from "../components/States";
 
 const PAGE_SIZE = 20;
@@ -206,7 +205,6 @@ export default function CatalogView({ collection, defaultSort = "title" }: { col
             {label}
           </button>
         ))}
-        <RegionSelect />
       </div>
 
       {data && (

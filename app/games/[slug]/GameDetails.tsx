@@ -8,7 +8,6 @@ import { ApiError, errorMessage, requestJson } from "@/lib/api-client";
 import { formatCompact, formatPrice, formatRating, formatReleaseDate, releaseYear } from "@/lib/format";
 import { REGIONS } from "@/lib/regions.mjs";
 import { useRegion } from "@/lib/use-region";
-import { RegionSelect } from "../../components/PriceTag";
 import GameMedia from "./GameMedia";
 import GameCard from "../../components/GameCard";
 import GameCover from "../../components/GameCover";
@@ -97,7 +96,7 @@ function PriceBlock({ game }: { game: Game }) {
     <div className="price-block">
       <div className="price-head">
         <h2>Цена в Steam</h2>
-        <RegionSelect />
+        <span>{current.label}</span>
       </div>
       {price ? (
         <p className="price-line">
