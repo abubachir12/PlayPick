@@ -1,0 +1,83 @@
+import {
+  boolean,
+  integer,
+  date,
+  index,
+  jsonb,
+  primaryKey,
+  real,
+  pgTable,
+  serial,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
+
+export const games = pgTable("games", {
+  id: serial("id").primaryKey(),
+
+  igdbId: integer("igdb_id").unique(),
+  rawgId: integer("rawg_id").unique(),
+  steamId: integer("steam_id").unique(),
+
+  slug: text("slug").notNull().unique(),
+  title: text("title").notNull(),
+
+  description: text("description"),
+  coverUrl: text("cover_url"),
+
+  developer: text("developer"),
+  publisher: text("publisher"),
+  releaseDate: date("release_date"),
+  genres: jsonb("genres").$type<string[]>(),
+  platforms: jsonb("platforms").$type<string[]>(),
+  tags: jsonb("tags").$type<string[]>(),
+  rating: real("rating"),
+  metacritic: integer("metacritic"),
+  playtime: integer("playtime"),
+
+  // Steam storefront data, refreshed daily; null when the game is not on Steam.
+  // price_* columns hold the main region (US, in cents) and drive sorting and discounts;
+  // prices holds the other regions (lib/regions.mjs) as { kz: { final, initial, discount, currency } | null, … }.
+  isFree: boolean("is_free"),
+  priceFinal: integer("price_final"),
+  priceInitial: integer("price_initial"),
+  discountPercent: integer("discount_percent"),
+  priceCurrency: text("price_currency"),
+  prices: jsonb("prices").$type<Record<string, { final: number; initial: number; discount: number; currency: string } | null>>(),
+  // Concurrent players from SteamSpy.
+  playersNow: integer("players_now"),
+  screenshots: jsonb("screenshots").$type<string[]>(),
+  trailer: jsonb("trailer").$type<{ name: string; thumbnail: string; hls: string }>(),
+  requirements: text("requirements"),
+  hasRussian: boolean("has_russian"),
+  marketUpdatedAt: timestamp("market_updated_at"),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  // Stored lower-cased and trimmed; uniqueness is enforced on the normalized value.
+  email: text("email").notNull().unique(),
+  name: text("name").notNull(),
+  // scrypt$N$r$p$salt$hash — never the password itself.
+  passwordHash: text("password_hash").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const sessions = pgTable("sessions", {
+  // SHA-256 of the random cookie token: a leaked table does not reveal live sessions.
+  tokenHash: text("token_hash").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [index("sessions_user_id_idx").on(table.userId)]);
+
+export const userGames = pgTable("user_games", {
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  gameId: integer("game_id").notNull().references(() => games.id, { onDelete: "cascade" }),
+  // "favorites" or "played", the same lists the browser library keeps.
+  list: text("list").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [primaryKey({ columns: [table.userId, table.gameId, table.list] })]);
