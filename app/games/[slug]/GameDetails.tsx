@@ -2,11 +2,12 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ExternalLink, Star } from "lucide-react";
+import { ArrowLeft, ExternalLink, Scale, Star } from "lucide-react";
 import type { Game } from "@/types/game";
 import { ApiError, errorMessage, requestJson } from "@/lib/api-client";
-import { formatCompact, formatPrice, formatRating, formatReleaseDate, releaseYear } from "@/lib/format";
+import { formatCompact, formatMoney, formatPrice, formatRating, formatReleaseDate, releaseYear } from "@/lib/format";
 import { REGIONS } from "@/lib/regions.mjs";
+import type { StoreOffers as StoreOffersData } from "@/lib/stores.mjs";
 import { useRegion } from "@/lib/use-region";
 import GameMedia from "./GameMedia";
 import GameCard from "../../components/GameCard";
@@ -131,6 +132,67 @@ function PriceBlock({ game }: { game: Game }) {
         </table>
       )}
       {updated && <p className="hint">Цены Steam, обновлено {updated}.</p>}
+    </div>
+  );
+}
+
+// The same game in other PC stores (Epic, GOG, Humble...): CheapShark prices, US dollars.
+function StoreOffers({ steamId }: { steamId: number }) {
+  const region = useRegion();
+  const [state, setState] = useState<{ steamId: number; data: StoreOffersData | null } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    requestJson<StoreOffersData>(`/api/offers?steamId=${steamId}`)
+      .then(({ data }) => !cancelled && setState({ steamId, data }))
+      .catch(() => !cancelled && setState({ steamId, data: null }));
+    return () => {
+      cancelled = true;
+    };
+  }, [steamId]);
+
+  if (!state || state.steamId !== steamId) {
+    return (
+      <div className="detail-block store-offers" aria-busy="true">
+        <h2>Где купить</h2>
+        <div className="skeleton skeleton-line wide" />
+        <div className="skeleton skeleton-line" />
+      </div>
+    );
+  }
+  // A single store adds nothing to the Steam block above; a failed lookup just hides the block.
+  const offers = state.data?.offers ?? [];
+  if (offers.length < 2) return null;
+  const cheapest = offers[0].price;
+  // Highlight the cheapest store only when it really saves money.
+  const best = cheapest < offers[offers.length - 1].price ? cheapest : null;
+  const lowest = state.data?.lowestEver;
+
+  return (
+    <div className="detail-block store-offers">
+      <h2>Где купить</h2>
+      <ul className="offer-list">
+        {offers.slice(0, 8).map((offer) => (
+          <li key={offer.storeId}>
+            <a href={offer.url} target="_blank" rel="noopener noreferrer nofollow" className={offer.price === best ? "is-best" : undefined}>
+              <span className="offer-store">
+                <strong>{offer.store}</strong>
+                <span>{offer.official ? "официальный магазин" : "авторизованный продавец"}</span>
+              </span>
+              <span className="offer-price">
+                {offer.discount > 0 && <span className="price-table-discount">−{offer.discount}%</span>}
+                {offer.price === 0 ? "Бесплатно" : formatMoney(offer.price, "USD")}
+              </span>
+              <ExternalLink size={13} aria-hidden="true" />
+            </a>
+          </li>
+        ))}
+      </ul>
+      <p className="hint">
+        Цены для США в долларах{region !== "us" ? " — в твоём регионе могут отличаться" : ""}.
+        {lowest && lowest.price < cheapest && <> Исторический минимум — {formatMoney(lowest.price, "USD")}.</>}
+        {" "}Данные <a href="https://www.cheapshark.com/" target="_blank" rel="noopener noreferrer">CheapShark</a>.
+      </p>
     </div>
   );
 }
@@ -274,6 +336,9 @@ export default function GameDetails({ params }: { params: Promise<{ slug: string
           <div className="game-hero-actions">
             <FavoriteButton game={game} withLabel />
             <PlayedButton game={game} />
+            <Link href={`/compare?a=${encodeURIComponent(game.slug)}`} className="library-button with-label">
+              <Scale size={16} /> <span>Сравнить</span>
+            </Link>
             <ShareButton title={`${game.title} — PlayPick`} />
           </div>
         </div>
@@ -310,6 +375,7 @@ export default function GameDetails({ params }: { params: Promise<{ slug: string
 
         <aside className="game-body-side">
           <PriceBlock game={game} />
+          {game.steamId && !game.isFree && <StoreOffers steamId={game.steamId} />}
           {game.genres && game.genres.length > 0 && (
             <div className="detail-block">
               <h2>Жанры</h2>

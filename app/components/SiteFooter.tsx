@@ -28,6 +28,7 @@ export default function SiteFooter() {
           <Link href="/pick">Подбор</Link>
           <Link href="/consultant">ИИ-консультант</Link>
           <Link href="/collections">Подборки</Link>
+          <Link href="/compare">Сравнить игры</Link>
           <Link href="/favorites">Избранное</Link>
         </nav>
 
@@ -43,6 +44,7 @@ export default function SiteFooter() {
           <a href="https://rawg.io/apidocs" target="_blank" rel="noopener noreferrer">RAWG API</a>
           <a href="https://store.steampowered.com/" target="_blank" rel="noopener noreferrer">Steam</a>
           <a href="https://steamspy.com/" target="_blank" rel="noopener noreferrer">SteamSpy</a>
+          <a href="https://www.cheapshark.com/" target="_blank" rel="noopener noreferrer">Цены магазинов: CheapShark</a>
           <a href="https://github.com/abubachir12/PlayPick" target="_blank" rel="noopener noreferrer">Код на GitHub</a>
         </div>
       </div>
