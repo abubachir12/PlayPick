@@ -1,17 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
-  Star,
-  LibraryBig,
+  ArrowRight,
+  BookOpen,
+  Coffee,
+  Compass,
+  Gamepad2,
   Heart,
+  LibraryBig,
+  MessageCircle,
+  Monitor,
+  SlidersHorizontal,
   Sparkles,
-  Search,
-  Bell,
-  UserRound,
-  Menu,
-  X,
+  Star,
+  Sword,
+  Users,
 } from "lucide-react";
+import type { Game } from "@/types/game";
+import type { RecommendationResponse } from "@/types/recommendation";
+import { requestJson } from "@/lib/api-client";
+import { formatCompact, formatCount, formatRating, pluralize, releaseYear } from "@/lib/format";
+import { seriesKey } from "@/lib/recommendations.mjs";
+import CollectionCard, { type CollectionTile } from "./components/CollectionCard";
+import GameCard from "./components/GameCard";
+import { FavoriteButton } from "./components/LibraryButtons";
+import { GridSkeleton } from "./components/States";
 
 const heroImages = [
   "/hero/ark.jpg",
@@ -20,93 +36,202 @@ const heroImages = [
   "/hero/witcher.jpg",
 ];
 
+// Photos from the team's hero set stand in until the catalog provides a cover for the mood.
+const moods = [
+  { id: "relax", label: "Расслабиться", text: "Уютные игры без спешки", icon: Coffee, photo: "/hero/rust.jpg" },
+  { id: "challenge", label: "Испытать себя", text: "Сложные бои и рогалики", icon: Sword, photo: "/hero/battlefield.jpg" },
+  { id: "story", label: "Погрузиться в сюжет", text: "Истории, где важен выбор", icon: BookOpen, photo: "/hero/witcher.jpg" },
+  { id: "explore", label: "Исследовать мир", text: "Открытые миры и песочницы", icon: Compass, photo: "/hero/ark.jpg" },
+  { id: "social", label: "Поиграть вместе", text: "Кооператив и мультиплеер", icon: Users, photo: null },
+];
+
+type Filters = { genres: string[]; platforms: string[] };
+
+function useJson<T>(url: string) {
+  const [state, setState] = useState<{ data: T; headers: Headers } | null | "error">(null);
+  useEffect(() => {
+    let cancelled = false;
+    requestJson<T>(url)
+      .then((result) => !cancelled && setState(result))
+      .catch(() => !cancelled && setState("error"));
+    return () => {
+      cancelled = true;
+    };
+  }, [url]);
+  return state;
+}
+
+function useMoodCovers() {
+  const [candidates, setCandidates] = useState<Record<string, Game[]>>({});
+  useEffect(() => {
+    let cancelled = false;
+    for (const mood of moods) {
+      requestJson<RecommendationResponse>("/api/recommendations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mood: mood.id, limit: 6 }),
+      }).then(({ data }) => {
+        const games = data.items.map((item) => item.game).filter((game) => game.coverUrl);
+        if (!cancelled) setCandidates((current) => ({ ...current, [mood.id]: games }));
+      }).catch(() => {});
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // The same hit often tops several moods; give each tile its own game while alternatives exist.
+  return useMemo(() => {
+    const used = new Set<number>();
+    const covers: Record<string, Game> = {};
+    for (const mood of moods) {
+      const list = candidates[mood.id] ?? [];
+      const game = list.find((item) => !used.has(item.id)) ?? list[0];
+      if (!game) continue;
+      used.add(game.id);
+      covers[mood.id] = game;
+    }
+    return covers;
+  }, [candidates]);
+}
+
+function SectionHeading({ title, text, href, link }: { title: string; text?: string; href?: string; link?: string }) {
+  return (
+    <div className="section-heading">
+      <div>
+        <h2>{title}</h2>
+        {text && <p>{text}</p>}
+      </div>
+      {href && <Link href={href} className="text-link">{link ?? "Смотреть все"} <ArrowRight size={14} /></Link>}
+    </div>
+  );
+}
+
+function Featured({ games }: { games: Game[] }) {
+  // The best-rated game with artwork; games are already sorted by rating.
+  const game = games.find((item) => item.coverUrl) ?? games[0];
+  if (!game) return null;
+
+  const rating = formatRating(game.rating);
+  const meta = [releaseYear(game.releaseDate), ...(game.genres ?? []).slice(0, 3)].filter(Boolean).join(" · ");
+
+  return (
+    <section className="page-section reveal">
+      <article className="featured">
+        {game.coverUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={game.coverUrl} alt="" className="featured-image" />
+        )}
+        <div className="featured-shade" />
+        <div className="featured-content">
+          <span className="eyebrow"><Sparkles size={14} /> Лучшая в каталоге</span>
+          <h2>{game.title}</h2>
+          <p className="featured-meta">
+            {rating && <span className="featured-rating"><Star size={15} fill="currentColor" /> {rating}</span>}
+            {meta}
+          </p>
+          {game.description && <p className="featured-text">{game.description}</p>}
+          <div className="featured-actions">
+            <Link href={`/games/${encodeURIComponent(game.slug)}`} className="primary-button">
+              Подробнее <ArrowRight size={16} />
+            </Link>
+            <FavoriteButton game={game} withLabel />
+          </div>
+        </div>
+      </article>
+    </section>
+  );
+}
+
+function GenreTiles({ games, genres }: { games: Game[]; genres: string[] }) {
+  // Each genre borrows the cover of its best-rated game, skipping covers another tile already uses.
+  const tiles = useMemo(() => {
+    const used = new Set<string>();
+    return genres.map((name) => ({ name, matches: games.filter((game) => game.genres?.includes(name)) }))
+      .filter((genre) => genre.matches.length > 0)
+      .sort((a, b) => b.matches.length - a.matches.length)
+      .slice(0, 8)
+      .map(({ name, matches }) => {
+        const withCover = matches.filter((game) => game.coverUrl);
+        const pick = withCover.find((game) => !used.has(game.coverUrl!)) ?? withCover[0] ?? matches[0];
+        if (pick?.coverUrl) used.add(pick.coverUrl);
+        return { name, cover: pick?.coverUrl ?? null, top: pick?.title };
+      });
+  }, [games, genres]);
+
+  if (!tiles.length) return null;
+  return (
+    <section className="page-section reveal">
+      <SectionHeading title="Жанры" text="Начни с любимого — каталог отфильтруется сам." href="/games" link="Весь каталог" />
+      <div className="genre-grid">
+        {tiles.map((tile) => (
+          <Link key={tile.name} href={`/games?genre=${encodeURIComponent(tile.name)}`} className="genre-tile">
+            {tile.cover && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={tile.cover} alt="" loading="lazy" />
+            )}
+            <span className="genre-tile-shade" />
+            <strong>{tile.name}</strong>
+            {tile.top && <span>например, {tile.top}</span>}
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default function Home() {
   const [currentImage, setCurrentImage] = useState(0);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [question, setQuestion] = useState("");
+  const router = useRouter();
+  // Twice as many as shown: sequels and remasters of one series are folded into a single card.
+  const top = useJson<Game[]>("/api/games?sort=rating&limit=24");
+  const popular = useJson<Game[]>("/api/games?sort=popular&limit=8");
+  const deals = useJson<Game[]>("/api/games?deal=1&sort=discount&limit=8");
+  const collections = useJson<CollectionTile[]>("/api/collections");
+  const fresh = useJson<Game[]>("/api/games?sort=release-date&limit=4");
+  const sample = useJson<Game[]>("/api/games?sort=rating&limit=100");
+  const filters = useJson<Filters>("/api/catalog/filters");
+  const moodCovers = useMoodCovers();
 
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentImage((prev) => (prev + 1) % heroImages.length);
-    }, 5000);
+    }, 6000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [currentImage]);
+
+  const ready = <T,>(state: { data: T } | null | "error") => state && state !== "error" ? state.data : null;
+  const total = sample && sample !== "error" ? Number(sample.headers.get("X-Total-Count")) || 0 : undefined;
+  const filterData = ready(filters);
+  const value = (count?: number) => count === undefined ? "—" : formatCount(count);
+  // While stats load the label uses the plural form, matching the dash placeholder.
+  const label = (count: number | undefined, one: string, few: string, many: string) =>
+    count === undefined ? many : pluralize(count, one, few, many);
+  const topGames = useMemo(() => {
+    const list = ready(top);
+    if (!list) return null;
+    const seen = new Set<string>();
+    return list.filter((game) => {
+      // "The Last of Us Remastered" and "The Last of Us" are one entry for a showcase row.
+      const key = seriesKey(game.title.replace(/\s+(remastered|remake|legacy|goty|\(\d{4}\)|(definitive|enhanced|complete|game of the year) edition)$/i, ""));
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).slice(0, 8);
+  }, [top]);
+  // Games nobody is playing right now do not belong under "playing now".
+  const popularGames = ready(popular)?.filter((game) => (game.playersNow ?? 0) > 0) ?? null;
+  const dealGames = ready(deals);
+  const collectionTiles = ready(collections);
+  const freshGames = ready(fresh);
+  const sampleGames = ready(sample);
 
   return (
-    <main>
-      <header>
-        <div className="header-inner">
-          <div className="header-logo">
-            <span>✦</span>
-            <span>PlayPick</span>
-          </div>
-
-          <nav className="desktop-nav">
-            <a href="#">Главная</a>
-            <a href="#">Игры</a>
-            <a href="#">Подбор</a>
-            <a href="#">Сообщество</a>
-          </nav>
-
-          <div className="profile-bar">
-            <div className="search-wrapper">
-              <Search size={16} className="search-icon" />
-
-              <input
-                className="search"
-                type="text"
-                placeholder="Поиск игр..."
-                aria-label="Поиск игр"
-              />
-            </div>
-
-            <button type="button" aria-label="Уведомления">
-              <Bell size={18} />
-            </button>
-
-            <button
-              type="button"
-              className="header-avatar"
-              aria-label="Профиль пользователя"
-            >
-              <UserRound size={18} />
-            </button>
-          </div>
-
-          <button
-            type="button"
-            className="mobile-menu-toggle"
-            aria-label={isMobileMenuOpen ? "Закрыть меню" : "Открыть меню"}
-            aria-expanded={isMobileMenuOpen}
-            aria-controls="mobile-navigation"
-            onClick={() => setIsMobileMenuOpen((prev) => !prev)}
-          >
-            {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
-          </button>
-        </div>
-
-        {isMobileMenuOpen && (
-          <nav className="mobile-nav" id="mobile-navigation">
-            <a href="#" onClick={() => setIsMobileMenuOpen(false)}>
-              Главная
-            </a>
-
-            <a href="#" onClick={() => setIsMobileMenuOpen(false)}>
-              Игры
-            </a>
-
-            <a href="#" onClick={() => setIsMobileMenuOpen(false)}>
-              Подбор
-            </a>
-
-            <a href="#" onClick={() => setIsMobileMenuOpen(false)}>
-              Сообщество
-            </a>
-          </nav>
-        )}
-      </header>
-
+    <main className="home">
       <section className="hero">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           key={currentImage}
           src={heroImages[currentImage]}
@@ -117,10 +242,6 @@ export default function Home() {
         <div className="hero-overlay"></div>
 
         <div className="hero-content">
-          {/* <div className="hero-label">
-            ✦ Персональные рекомендации
-          </div> */}
-
           <h1 className="hero-title">
             Во что поиграть
             <span>сейчас?</span>
@@ -131,47 +252,81 @@ export default function Home() {
             и то, что тебе нравится.
           </p>
 
-          <div className="hero-buttons">
-            <button className="primary-button">
-              Подобрать игру →
-            </button>
+          <form
+            className="hero-ask"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const text = question.trim();
+              router.push(text ? `/consultant?q=${encodeURIComponent(text)}` : "/consultant");
+            }}
+          >
+            <Sparkles size={18} aria-hidden="true" />
+            <label className="visually-hidden" htmlFor="hero-question">Вопрос ИИ-консультанту</label>
+            <input
+              id="hero-question"
+              value={question}
+              maxLength={300}
+              placeholder="Опиши словами: «кооператив на двоих без хоррора»"
+              onChange={(event) => setQuestion(event.target.value)}
+            />
+            <button type="submit">Спросить ИИ</button>
+          </form>
 
-            <button className="secondary-button">
-              Как это работает?
-            </button>
+          <div className="hero-buttons">
+            <Link href="/pick" className="primary-button">
+              Подобрать по настроению →
+            </Link>
+
+            <Link href="/games" className="secondary-button">
+              Открыть каталог
+            </Link>
+          </div>
+
+          <div className="hero-dots" role="tablist" aria-label="Фоновые изображения">
+            {heroImages.map((image, index) => (
+              <button
+                key={image}
+                type="button"
+                role="tab"
+                aria-selected={index === currentImage}
+                aria-label={`Изображение ${index + 1}`}
+                className={index === currentImage ? "is-active" : undefined}
+                onClick={() => setCurrentImage(index)}
+              />
+            ))}
           </div>
 
           <div className="hero-stats">
-            <div className="hero-stat">
-              <div className="hero-stat-icon">
-                <Star size={18} />
-              </div>
-
-              <div className="hero-stat-content">
-                <strong>12 500+</strong>
-                <span>оценок от игроков</span>
-              </div>
-            </div>
-
             <div className="hero-stat">
               <div className="hero-stat-icon">
                 <LibraryBig size={18} />
               </div>
 
               <div className="hero-stat-content">
-                <strong>8 900+</strong>
-                <span>игр в базе</span>
+                <strong>{value(total)}</strong>
+                <span>{label(total, "игра", "игры", "игр")} в базе</span>
               </div>
             </div>
 
             <div className="hero-stat">
               <div className="hero-stat-icon">
-                <Heart size={18} />
+                <Gamepad2 size={18} />
               </div>
 
               <div className="hero-stat-content">
-                <strong>100+</strong>
-                <span>уникальных характеристик</span>
+                <strong>{value(filterData?.genres.length)}</strong>
+                <span>{label(filterData?.genres.length, "жанр", "жанра", "жанров")}</span>
+              </div>
+            </div>
+
+            <div className="hero-stat">
+              <div className="hero-stat-icon">
+                <Monitor size={18} />
+              </div>
+
+              <div className="hero-stat-content">
+                <strong>{value(filterData?.platforms.length)}</strong>
+                <span>{label(filterData?.platforms.length, "платформа", "платформы", "платформ")}</span>
               </div>
             </div>
 
@@ -181,10 +336,128 @@ export default function Home() {
               </div>
 
               <div className="hero-stat-content">
-                <strong>∞</strong>
-                <span>персональных рекомендаций</span>
+                <strong>{moods.length}</strong>
+                <span>настроений</span>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="page-section reveal">
+        <SectionHeading title="Под настроение" text="Выбери, чего хочется, — подборка соберётся за секунду." href="/pick" link="Настроить подбор" />
+        <div className="mood-tiles">
+          {moods.map(({ id, label, text, icon: Icon, photo }) => {
+            const game = moodCovers[id];
+            const image = game?.coverUrl ?? photo;
+            return (
+              <Link key={id} href={`/pick?mood=${id}`} className="mood-tile">
+                {image && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={image} alt="" loading="lazy" />
+                )}
+                <span className="mood-tile-shade" />
+                <span className="mood-tile-icon"><Icon size={20} /></span>
+                <strong>{label}</strong>
+                <span className="mood-tile-text">{game ? `Например, ${game.title}` : text}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="page-section reveal">
+        <SectionHeading title="Как это работает" text="Три способа найти игру — от «сам не знаю, чего хочу» до точного запроса." />
+        <ol className="steps">
+          <li>
+            <span className="step-icon"><MessageCircle size={20} /></span>
+            <strong>Спроси словами</strong>
+            <p>Напиши ИИ-консультанту, как другу: «что-нибудь уютное на вечер» — он ответит и покажет игры из каталога.</p>
+            <Link href="/consultant" className="text-link">К консультанту <ArrowRight size={14} /></Link>
+          </li>
+          <li>
+            <span className="step-icon"><SlidersHorizontal size={20} /></span>
+            <strong>Или выбери настроение</strong>
+            <p>Настроение, платформа, жанры и время. У каждой игры в подборке написано, почему она подошла.</p>
+            <Link href="/pick" className="text-link">К подбору <ArrowRight size={14} /></Link>
+          </li>
+          <li>
+            <span className="step-icon"><Heart size={20} /></span>
+            <strong>Сохрани, что понравилось</strong>
+            <p>Избранное учится на твоём вкусе: следующие подборки будут похожи на игры, которые ты отметил.</p>
+            <Link href="/favorites" className="text-link">В избранное <ArrowRight size={14} /></Link>
+          </li>
+        </ol>
+      </section>
+
+      {popularGames && popularGames.length >= 4 && (
+        <section className="page-section reveal">
+          <SectionHeading title="Сейчас играют" text="Самый большой онлайн в Steam на сегодня." href="/collections/playing-now" />
+          <div className="game-grid">
+            {popularGames.slice(0, 8).map((game) => (
+              <GameCard key={game.id} game={game}>
+                <p className="card-online"><span aria-hidden="true" /> {formatCompact(game.playersNow)} онлайн</p>
+              </GameCard>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {topGames && <Featured games={topGames} />}
+
+      {dealGames && dealGames.length >= 4 && (
+        <section className="page-section reveal">
+          <SectionHeading title="Сейчас со скидкой" text="Скидки в Steam, обновляются раз в день. Регион цен выбирается в шапке сайта." href="/collections/deals" />
+          <div className="game-grid">
+            {dealGames.slice(0, 8).map((game) => <GameCard key={game.id} game={game} />)}
+          </div>
+        </section>
+      )}
+
+      {collectionTiles && collectionTiles.length > 0 && (
+        <section className="page-section reveal">
+          <SectionHeading title="Готовые подборки" text="Когда не хочется ничего настраивать." href="/collections" link="Все подборки" />
+          <div className="genre-grid">
+            {collectionTiles.filter((tile) => !["playing-now", "deals"].includes(tile.id)).slice(0, 8).map((tile) => (
+              <CollectionCard key={tile.id} tile={tile} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {top !== "error" && (
+        <section className="page-section reveal">
+          <SectionHeading title="Лучшие по оценкам" text="Средняя оценка игроков RAWG и отзывы Steam." href="/games?sort=rating" />
+          {topGames ? (
+            <div className="game-grid">
+              {topGames.map((game) => <GameCard key={game.id} game={game} />)}
+            </div>
+          ) : (
+            <GridSkeleton count={8} />
+          )}
+        </section>
+      )}
+
+      {sampleGames && filterData && <GenreTiles games={sampleGames} genres={filterData.genres} />}
+
+      {freshGames && freshGames.length > 0 && (
+        <section className="page-section reveal">
+          <SectionHeading title="Свежие релизы" text="Самые новые игры каталога." href="/games?sort=release-date" />
+          <div className="game-grid">
+            {freshGames.map((game) => <GameCard key={game.id} game={game} />)}
+          </div>
+        </section>
+      )}
+
+      <section className="page-section reveal">
+        <div className="cta-band">
+          <div>
+            <h2>Не можешь выбрать?</h2>
+            <p>Отметь настроение и сколько есть времени — остальное PlayPick сделает сам.</p>
+          </div>
+          <div className="heading-actions">
+            <Link href="/consultant" className="secondary-button">Спросить ИИ-консультанта</Link>
+            <Link href="/pick" className="primary-button">Подобрать игру <ArrowRight size={16} /></Link>
           </div>
         </div>
       </section>

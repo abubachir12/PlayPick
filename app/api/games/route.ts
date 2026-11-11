@@ -1,24 +1,35 @@
 import { NextResponse } from "next/server";
-import { and, asc, ilike, sql } from "drizzle-orm";
+import { and, asc, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { games } from "@/db/schema";
-import { CatalogQueryError, escapeLike, parseCatalogQuery, parseCatalogFilters } from "@/lib/catalog-query.mjs";
+import { CatalogQueryError, escapeLike, parseCatalogQuery, parseCatalogFilters, parseMarketFilters } from "@/lib/catalog-query.mjs";
+import { COLLECTION_IDS, findCollection } from "@/lib/collections.mjs";
+import { expandSearch } from "@/lib/search-aliases.mjs";
+import { cardColumns, catalogOrdering, collectionConditions } from "@/lib/game-columns";
 
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   try {
     const { page, limit, search, offset } = parseCatalogQuery(params);
     const { genre, platform, sort } = parseCatalogFilters(params);
+    const market = parseMarketFilters(params, COLLECTION_IDS);
+    const collection = market.collection ? findCollection(market.collection) : null;
+    // "ведьмак" also searches "witcher": titles are stored in English.
+    const terms = expandSearch(search);
     const filter = and(
-      search ? ilike(games.title, `%${escapeLike(search)}%`) : undefined,
+      terms.length ? or(...terms.map((term) => ilike(games.title, `%${escapeLike(term)}%`))) : undefined,
       genre ? sql`${games.genres} @> ${JSON.stringify([genre])}::jsonb` : undefined,
       platform ? sql`${games.platforms} @> ${JSON.stringify([platform])}::jsonb` : undefined,
+      market.deal ? sql`${games.discountPercent} > 0` : undefined,
+      market.free ? sql`${games.isFree} IS TRUE` : undefined,
+      market.russian ? sql`${games.hasRussian} IS TRUE` : undefined,
+      ...(collection ? collectionConditions(collection) : []),
     );
-    const ordering = sort === "rating" ? [sql`${games.rating} DESC NULLS LAST`]
-      : sort === "release-date" ? [sql`${games.releaseDate} DESC NULLS LAST`] : [];
+    // A collection brings its own order unless the request names one.
+    const ordering = catalogOrdering(collection && !params.has("sort") ? collection.sort : sort);
     // A window count keeps rows and total consistent within one database snapshot.
     const rows = await db.select({
-      game: games,
+      game: cardColumns,
       total: sql<number>`count(*) over()`.mapWith(Number),
     }).from(games).where(filter).orderBy(...ordering, asc(games.title), asc(games.id))
       .limit(limit).offset(offset);
